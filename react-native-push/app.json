@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Hibira Push example",
+    "slug": "hibira-push-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "io.hibira.examples.push",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "io.hibira.examples.push",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": ["expo-dev-client", "expo-notifications"]
+  }
+}
