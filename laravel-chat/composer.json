@@ -13,7 +13,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
-        "hibira-io/laravel": "^0.1@dev",
+        "hibira-io/laravel": "^0.1",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0"
     },
@@ -89,11 +89,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": {
-        "hibira": {
-            "type": "vcs",
-            "url": "https://github.com/hibira-io/laravel"
-        }
-    }
+    "prefer-stable": true
 }
