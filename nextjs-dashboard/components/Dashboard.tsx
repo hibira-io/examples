@@ -30,7 +30,7 @@ export default function Dashboard({ appKey, host, port, tls }: Props) {
 
   useEffect(() => {
     const pusher = new Pusher(appKey, {
-      cluster: 'hibira', // required by pusher-js, unused once wsHost is set
+      cluster: 'hkg', // required by pusher-js, unused once wsHost is set
       wsHost: host,
       wsPort: port,
       wssPort: port,
