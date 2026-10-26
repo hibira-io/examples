@@ -58,7 +58,7 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
   const pusher = useCallback((): Pusher => {
     if (!pusherRef.current) {
       pusherRef.current = new Pusher(appKey, {
-        cluster: 'hibira', // required by pusher-js, unused once wsHost is set
+        cluster: 'hkg', // required by pusher-js, unused once wsHost is set
         wsHost: host,
         wsPort: port,
         wssPort: port,
