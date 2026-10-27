@@ -9,6 +9,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 | [laravel-chat](laravel-chat) | Laravel 13, Echo, Vite | Presence rooms, broadcast events, typing indicators with client events | `php artisan serve` |
 | [nextjs-dashboard](nextjs-dashboard) | Next.js 16, pusher-js | Server-side triggers, a live dashboard in every open tab, a large presence viewer count | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-dashboard?file=.env.example) |
 | [nextjs-lobby](nextjs-lobby) | Next.js 16, @hibira-io/lobby | A playable multiplayer game: room list, seats, host, ready, chat, game events between browsers | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-lobby?file=.env.example) |
+| [nextjs-spaces](nextjs-spaces) | Next.js 16, @hibira-io/spaces | A shared form: who's here, live cursors, field locks, follow mode | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-spaces?file=.env.example) |
 | [react-native-push](react-native-push) | Expo, expo-notifications | iOS and Android push: device registration, topics, signed-in users | Development build on a phone |
 
 ## Live demos
@@ -39,6 +40,8 @@ packages:
   presence channels with up to 100,000 members
 - [@hibira-io/lobby](https://github.com/hibira-io/lobby-js): game rooms and
   lobbies on presence channels
+- [@hibira-io/spaces](https://github.com/hibira-io/spaces-js): who's online,
+  live cursors, component locks and follow mode on presence channels
 - [@hibira-io/push-web](https://github.com/hibira-io/hibira-push-web),
   [hibira-push-android](https://github.com/hibira-io/hibira-push-android),
   [hibira-push-ios](https://github.com/hibira-io/hibira-push-ios): push
