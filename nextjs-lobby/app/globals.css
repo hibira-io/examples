@@ -271,3 +271,29 @@ button.link {
     min-height: 200px;
   }
 }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.9em;
+}
+.topbar a {
+  text-decoration: none;
+}
+.topbar select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

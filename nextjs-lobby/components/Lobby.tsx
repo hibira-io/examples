@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import RoomView from './RoomView';
 import { CAPACITY, ROOM_PREFIX, roomCode, validCode } from '@/lib/game';
+import { endpoint } from '@/lib/demo';
+import { useT } from './I18n';
 
 interface Props {
   appKey: string;
@@ -35,6 +37,7 @@ function loadPlayer(): Player {
 }
 
 export default function Lobby({ appKey, host, port, tls }: Props) {
+  const t = useT();
   const [player, setPlayer] = useState<Player | null>(null);
   const [rooms, setRooms] = useState<OpenRoom[]>([]);
   const [code, setCode] = useState('');
@@ -65,7 +68,7 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
         forceTLS: tls,
         enabledTransports: ['ws', 'wss'],
         channelAuthorization: {
-          endpoint: '/api/hibira/auth',
+          endpoint: endpoint('/api/hibira/auth', '/lobby/auth'),
           transport: 'ajax',
           paramsProvider: () => {
             const p = loadPlayer();
@@ -84,7 +87,7 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
     if (room) return;
     let stop = false;
     const load = () =>
-      fetch('/api/rooms')
+      fetch(endpoint('/api/rooms', '/lobby/rooms'))
         .then((r) => (r.ok ? r.json() : []))
         .then((list: OpenRoom[]) => !stop && setRooms(list))
         .catch(() => {});
@@ -117,16 +120,13 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
   return (
     <main className="lobby">
       <header>
-        <h1>Reaction rooms</h1>
-        <p className="muted">
-          Up to {CAPACITY} players per room. Everyone gets ready, the host starts, and the fastest tap after
-          “GO!” wins the round.
-        </p>
+        <h1>{t.title}</h1>
+        <p className="muted">{t.intro(CAPACITY)}</p>
       </header>
 
       <section className="card">
         <label className="field">
-          <span>Your name</span>
+          <span>{t.yourName}</span>
           <input
             value={player.name}
             maxLength={20}
@@ -135,7 +135,7 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
         </label>
         <div className="row">
           <button className="primary" onClick={() => enter(roomCode())}>
-            Create a room
+            {t.createRoom}
           </button>
           <form
             className="row"
@@ -146,14 +146,14 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
           >
             <input
               className="code-input"
-              aria-label="Room code"
+              aria-label={t.roomCode}
               placeholder="CODE"
               value={code}
               maxLength={4}
               onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
             />
             <button type="submit" disabled={!validCode(code)}>
-              Join
+              {t.join}
             </button>
           </form>
         </div>
@@ -161,19 +161,17 @@ export default function Lobby({ appKey, host, port, tls }: Props) {
       </section>
 
       <section className="card">
-        <h2>Open rooms</h2>
+        <h2>{t.openRooms}</h2>
         {rooms.length === 0 ? (
-          <p className="muted">No one is playing right now. Create a room and send its link to a friend.</p>
+          <p className="muted">{t.noRooms}</p>
         ) : (
           <ul className="rooms">
             {rooms.map((r) => (
               <li key={r.id}>
                 <span className="code">{r.id}</span>
-                <span className="muted">
-                  {r.members}/{CAPACITY} players
-                </span>
+                <span className="muted">{t.playerCount(r.members, CAPACITY)}</span>
                 <button disabled={r.members >= CAPACITY} onClick={() => enter(r.id)}>
-                  {r.members >= CAPACITY ? 'Full' : 'Join'}
+                  {r.members >= CAPACITY ? t.full : t.join}
                 </button>
               </li>
             ))}
