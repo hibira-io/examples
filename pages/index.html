@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hibira live demos</title>
+    <meta name="description" content="Realtime demos built with Hibira: a multiplayer game lobby and a live dashboard. Open them in two tabs and watch them sync." />
+    <link rel="icon" href="data:," />
+    <style>
+      :root { --bg: #f6f7fb; --card: #fff; --text: #14161f; --muted: #646a7d; --border: #e3e6ef; --accent: #5b4bff; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #0e1016; --card: #171a23; --text: #eef0f6; --muted: #9aa0b4; --border: #262a36; --accent: #8f84ff; }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+      a { color: var(--accent); }
+      main { max-width: 860px; margin: 0 auto; padding: 32px 16px 48px; }
+      nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+      nav a { text-decoration: none; font-weight: 600; }
+      select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
+      h1 { font-size: 1.8em; margin: 32px 0 8px; }
+      .muted { color: var(--muted); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 24px; }
+      .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+      .card h2 { margin: 0; font-size: 1.15em; }
+      .card p { margin: 0; flex: 1; }
+      .links { display: flex; gap: 16px; flex-wrap: wrap; }
+      .button { background: var(--accent); color: #fff; border-radius: 8px; padding: 6px 14px; text-decoration: none; font-weight: 600; }
+      footer { margin-top: 40px; font-size: 0.9em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a id="home" href="https://hibira.io/?utm_source=github&amp;utm_medium=demo&amp;utm_campaign=examples&amp;utm_content=index">Hibira</a>
+        <select id="lang" aria-label="Language"></select>
+      </nav>
+      <h1 data-t="title"></h1>
+      <p class="muted" data-t="intro"></p>
+      <div class="grid">
+        <section class="card">
+          <h2 data-t="lobbyTitle"></h2>
+          <p class="muted" data-t="lobbyText"></p>
+          <div class="links">
+            <a class="button" href="nextjs-lobby/" data-t="open" data-demo></a>
+            <a href="https://github.com/hibira-io/examples/tree/main/nextjs-lobby" data-t="source"></a>
+          </div>
+        </section>
+        <section class="card">
+          <h2 data-t="dashboardTitle"></h2>
+          <p class="muted" data-t="dashboardText"></p>
+          <div class="links">
+            <a class="button" href="nextjs-dashboard/" data-t="open" data-demo></a>
+            <a href="https://github.com/hibira-io/examples/tree/main/nextjs-dashboard" data-t="source"></a>
+          </div>
+        </section>
+      </div>
+      <footer class="muted" data-t="footer"></footer>
+    </main>
+    <script>
+      const STRINGS = {
+        en: {
+          name: 'English',
+          title: 'Hibira live demos',
+          intro: 'Open a demo in two tabs, or send its link to a friend, and watch both update in real time. Each demo is a complete example app you can copy from GitHub.',
+          lobbyTitle: 'Game lobby',
+          lobbyText: 'Room list, seats, host, ready, chat and a reaction game between browsers, with @hibira-io/lobby on presence channels.',
+          dashboardTitle: 'Live dashboard',
+          dashboardText: 'Server events update every open dashboard at once, with a viewer count from a large presence channel.',
+          open: 'Open the demo',
+          source: 'Source code',
+          footer: 'Hibira is a hosted realtime WebSocket service that speaks the Pusher Channels protocol. The free plan needs no card.',
+        },
+        'zh-TW': {
+          name: '繁體中文',
+          title: 'Hibira 即時 demo',
+          intro: '在兩個分頁打開 demo，或把連結傳給朋友，就能看到兩邊即時同步。每個 demo 都是完整的範例 app，可以直接從 GitHub 複製。',
+          lobbyTitle: '遊戲大廳',
+          lobbyText: '房間列表、座位、房主、準備、聊天，加上瀏覽器之間的反應力小遊戲，使用 presence 頻道上的 @hibira-io/lobby。',
+          dashboardTitle: '即時儀表板',
+          dashboardText: '伺服器事件同時更新每個打開的儀表板，觀看人數來自大型 presence 頻道。',
+          open: '打開 demo',
+          source: '原始碼',
+          footer: 'Hibira 是相容 Pusher Channels 協定的即時 WebSocket 託管服務，免費方案不需要信用卡。',
+        },
+        'zh-CN': {
+          name: '简体中文',
+          title: 'Hibira 实时 demo',
+          intro: '在两个标签页打开 demo，或把链接发给朋友，就能看到两边实时同步。每个 demo 都是完整的示例 app，可以直接从 GitHub 复制。',
+          lobbyTitle: '游戏大厅',
+          lobbyText: '房间列表、座位、房主、准备、聊天，加上浏览器之间的反应力小游戏，使用 presence 频道上的 @hibira-io/lobby。',
+          dashboardTitle: '实时仪表盘',
+          dashboardText: '服务器事件同时更新每个打开的仪表盘，观看人数来自大型 presence 频道。',
+          open: '打开 demo',
+          source: '源代码',
+          footer: 'Hibira 是兼容 Pusher Channels 协议的实时 WebSocket 托管服务，免费方案无需信用卡。',
+        },
+        ja: {
+          name: '日本語',
+          title: 'Hibira ライブデモ',
+          intro: 'デモを 2 つのタブで開くか、リンクを友達に送ると、両方がリアルタイムに同期します。どのデモも GitHub からそのまま使える完全なサンプルアプリです。',
+          lobbyTitle: 'ゲームロビー',
+          lobbyText: 'ルーム一覧、席、ホスト、準備、チャット、ブラウザ同士のリアクションゲーム。presence チャンネル上の @hibira-io/lobby を使っています。',
+          dashboardTitle: 'ライブダッシュボード',
+          dashboardText: 'サーバーのイベントが開いているすべてのダッシュボードを同時に更新し、閲覧人数は大規模 presence チャンネルから取得します。',
+          open: 'デモを開く',
+          source: 'ソースコード',
+          footer: 'Hibira は Pusher Channels プロトコル互換のリアルタイム WebSocket ホスティングサービスです。無料プランはカード不要です。',
+        },
+        ko: {
+          name: '한국어',
+          title: 'Hibira 라이브 데모',
+          intro: '데모를 두 탭에서 열거나 친구에게 링크를 보내면 양쪽이 실시간으로 동기화되는 것을 볼 수 있습니다. 모든 데모는 GitHub에서 바로 가져다 쓸 수 있는 완전한 예제 앱입니다.',
+          lobbyTitle: '게임 로비',
+          lobbyText: '방 목록, 자리, 방장, 준비, 채팅, 브라우저 간 반응 속도 게임. presence 채널 위의 @hibira-io/lobby를 사용합니다.',
+          dashboardTitle: '라이브 대시보드',
+          dashboardText: '서버 이벤트가 열려 있는 모든 대시보드를 한 번에 업데이트하고, 시청자 수는 대규모 presence 채널에서 가져옵니다.',
+          open: '데모 열기',
+          source: '소스 코드',
+          footer: 'Hibira는 Pusher Channels 프로토콜과 호환되는 실시간 WebSocket 호스팅 서비스입니다. 무료 플랜은 카드가 필요 없습니다.',
+        },
+        th: {
+          name: 'ไทย',
+          title: 'เดโมสดของ Hibira',
+          intro: 'เปิดเดโมในสองแท็บ หรือส่งลิงก์ให้เพื่อน แล้วดูทั้งสองฝั่งอัปเดตแบบเรียลไทม์ ทุกเดโมเป็นแอปตัวอย่างครบชุดที่คัดลอกจาก GitHub ได้ทันที',
+          lobbyTitle: 'ล็อบบี้เกม',
+          lobbyText: 'รายการห้อง ที่นั่ง หัวห้อง ปุ่มพร้อม แชต และเกมวัดความไวระหว่างเบราว์เซอร์ ด้วย @hibira-io/lobby บน presence channel',
+          dashboardTitle: 'แดชบอร์ดสด',
+          dashboardText: 'อีเวนต์จากเซิร์ฟเวอร์อัปเดตทุกแดชบอร์ดที่เปิดอยู่พร้อมกัน พร้อมจำนวนผู้ชมจาก large presence channel',
+          open: 'เปิดเดโม',
+          source: 'ซอร์สโค้ด',
+          footer: 'Hibira คือบริการ WebSocket เรียลไทม์แบบโฮสต์ที่รองรับโปรโตคอล Pusher Channels แพ็กเกจฟรีไม่ต้องใช้บัตร',
+        },
+        vi: {
+          name: 'Tiếng Việt',
+          title: 'Demo trực tiếp của Hibira',
+          intro: 'Mở một demo ở hai tab, hoặc gửi liên kết cho bạn bè, và xem cả hai cập nhật theo thời gian thực. Mỗi demo là một ứng dụng mẫu hoàn chỉnh mà bạn có thể sao chép từ GitHub.',
+          lobbyTitle: 'Sảnh trò chơi',
+          lobbyText: 'Danh sách phòng, chỗ ngồi, chủ phòng, sẵn sàng, trò chuyện và trò chơi phản xạ giữa các trình duyệt, với @hibira-io/lobby trên presence channel.',
+          dashboardTitle: 'Bảng điều khiển trực tiếp',
+          dashboardText: 'Sự kiện từ máy chủ cập nhật mọi bảng điều khiển đang mở cùng lúc, kèm số người xem từ large presence channel.',
+          open: 'Mở demo',
+          source: 'Mã nguồn',
+          footer: 'Hibira là dịch vụ WebSocket thời gian thực được lưu trữ, tương thích giao thức Pusher Channels. Gói miễn phí không cần thẻ.',
+        },
+      };
+      const LANGS = Object.keys(STRINGS);
+
+      function toLang(tag) {
+        if (!tag) return null;
+        const t = tag.toLowerCase();
+        const exact = LANGS.find((l) => l.toLowerCase() === t);
+        if (exact) return exact;
+        if (t.startsWith('zh')) return /hans|cn|sg|my/.test(t) ? 'zh-CN' : 'zh-TW';
+        return LANGS.find((l) => l === t.split('-')[0]) || null;
+      }
+
+      function detect() {
+        const fromURL = toLang(new URLSearchParams(location.search).get('lang'));
+        if (fromURL) return fromURL;
+        try {
+          const saved = toLang(localStorage.getItem('lang'));
+          if (saved) return saved;
+        } catch {}
+        for (const tag of navigator.languages || [navigator.language]) {
+          const lang = toLang(tag);
+          if (lang) return lang;
+        }
+        return 'en';
+      }
+
+      // The demos share this origin, so they read the same remembered
+      // language; ?lang= is passed on for the first visit as well.
+      function apply(lang) {
+        const s = STRINGS[lang];
+        document.documentElement.lang = lang;
+        document.title = s.title;
+        for (const el of document.querySelectorAll('[data-t]')) el.textContent = s[el.dataset.t];
+        for (const a of document.querySelectorAll('[data-demo]')) a.search = '?lang=' + lang;
+        select.value = lang;
+      }
+
+      const select = document.getElementById('lang');
+      for (const l of LANGS) select.add(new Option(STRINGS[l].name, l));
+      select.addEventListener('change', () => {
+        try {
+          localStorage.setItem('lang', select.value);
+        } catch {}
+        apply(select.value);
+      });
+      apply(detect());
+    </script>
+  </body>
+</html>

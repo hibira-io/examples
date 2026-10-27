@@ -5,9 +5,14 @@ import Pusher from 'pusher-js';
 import { LargePresence } from '@hibira-io/large-presence';
 import { CHANNEL, VIEWERS_CHANNEL, type Order, type Tick } from '@/lib/metrics';
 import Sparkline from './Sparkline';
+import { useT } from './I18n';
+import { DEMO_API, endpoint } from '@/lib/demo';
 
 const WINDOW = 60; // seconds shown in the charts
 const FEED = 12; // orders shown in the feed
+// The hosted demo's simulator stops by itself, so a forgotten tab does not
+// publish all day.
+const DEMO_SIMULATOR_MINUTES = 3;
 
 type State = 'connecting' | 'connected' | 'unavailable' | 'failed' | 'disconnected' | 'initialized';
 
@@ -19,6 +24,7 @@ interface Props {
 }
 
 export default function Dashboard({ appKey, host, port, tls }: Props) {
+  const t = useT();
   const [connection, setConnection] = useState<State>('connecting');
   const [ticks, setTicks] = useState<Tick[]>([]);
   const [feed, setFeed] = useState<Order[]>([]);
@@ -36,7 +42,7 @@ export default function Dashboard({ appKey, host, port, tls }: Props) {
       wssPort: port,
       forceTLS: tls,
       enabledTransports: ['ws', 'wss'],
-      channelAuthorization: { endpoint: '/api/hibira/auth', transport: 'ajax' },
+      channelAuthorization: { endpoint: endpoint('/api/hibira/auth', '/dashboard/auth'), transport: 'ajax' },
     });
     pusher.connection.bind('state_change', ({ current }: { current: State }) => setConnection(current));
 
@@ -68,13 +74,18 @@ export default function Dashboard({ appKey, host, port, tls }: Props) {
   useEffect(() => {
     if (!simulating) return;
     const timer = setInterval(async () => {
-      const res = await fetch('/api/tick', { method: 'POST' });
+      const res = await fetch(endpoint('/api/tick', '/dashboard/tick'), { method: 'POST' });
       if (!res.ok) {
-        setError(`Publishing failed (${res.status}). Check HIBIRA_APP_ID and HIBIRA_APP_SECRET.`);
+        setError(t.publishFailed(res.status) + (DEMO_API ? '' : ' Check HIBIRA_APP_ID and HIBIRA_APP_SECRET.'));
         setSimulating(false);
       }
     }, 1000);
-    return () => clearInterval(timer);
+    const stop = DEMO_API ? setTimeout(() => setSimulating(false), DEMO_SIMULATOR_MINUTES * 60_000) : undefined;
+    return () => {
+      clearInterval(timer);
+      clearTimeout(stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [simulating]);
 
   const visitors = useMemo(() => ticks.map((t) => t.visitors), [ticks]);
@@ -85,13 +96,13 @@ export default function Dashboard({ appKey, host, port, tls }: Props) {
     <main className="dashboard">
       <header>
         <div>
-          <h1>Live sales</h1>
+          <h1>{t.title}</h1>
           <p className="muted">
-            Realtime over <code>{host}</code>
+            {t.realtimeOver} <code>{host}</code>
           </p>
         </div>
         <div className="actions">
-          <span className={`status status-${connection}`}>{connection}</span>
+          <span className={`status status-${connection}`}>{t.states[connection]}</span>
           <button
             type="button"
             className={simulating ? 'secondary' : 'primary'}
@@ -100,7 +111,7 @@ export default function Dashboard({ appKey, host, port, tls }: Props) {
               setSimulating((s) => !s);
             }}
           >
-            {simulating ? 'Stop simulator' : 'Start simulator'}
+            {simulating ? t.stopSimulator : t.startSimulator}
           </button>
         </div>
       </header>
@@ -108,33 +119,33 @@ export default function Dashboard({ appKey, host, port, tls }: Props) {
       {error && <p className="error">{error}</p>}
       {!simulating && ticks.length === 0 && (
         <p className="hint">
-          Start the simulator, then open this page in a second tab or on your phone: every open dashboard updates
-          from the same events.
+          {t.hint}
+          {DEMO_API && ` ${t.autoStop(DEMO_SIMULATOR_MINUTES)}`}
         </p>
       )}
 
       <section className="kpis">
-        <Kpi label="Visitors on the shop" value={last ? last.visitors.toLocaleString() : '–'} />
-        <Kpi label="Orders" value={totals.current.orders.toLocaleString()} />
-        <Kpi label="Revenue" value={`$${totals.current.revenue.toLocaleString()}`} />
-        <Kpi label="Watching this dashboard" value={viewers === null ? '–' : viewers.toLocaleString()} />
+        <Kpi label={t.visitors} value={last ? last.visitors.toLocaleString() : '–'} />
+        <Kpi label={t.orders} value={totals.current.orders.toLocaleString()} />
+        <Kpi label={t.revenue} value={`$${totals.current.revenue.toLocaleString()}`} />
+        <Kpi label={t.watching} value={viewers === null ? '–' : viewers.toLocaleString()} />
       </section>
 
       <section className="charts">
         <div className="card">
-          <h2>Visitors, last {WINDOW} s</h2>
+          <h2>{t.visitorsChart(WINDOW)}</h2>
           <Sparkline values={visitors} />
         </div>
         <div className="card">
-          <h2>Orders per second</h2>
+          <h2>{t.ordersPerSecond}</h2>
           <Sparkline values={ordersPerTick} bars />
         </div>
       </section>
 
       <section className="card">
-        <h2>Latest orders</h2>
+        <h2>{t.latestOrders}</h2>
         {feed.length === 0 ? (
-          <p className="muted">No orders yet.</p>
+          <p className="muted">{t.noOrders}</p>
         ) : (
           <ul className="feed">
             {feed.map((o) => (

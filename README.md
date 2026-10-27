@@ -11,6 +11,16 @@ messaging and push notifications. Each one runs with a free Hibira app
 | [nextjs-lobby](nextjs-lobby) | Next.js 16, @hibira-io/lobby | A playable multiplayer game: room list, seats, host, ready, chat, game events between browsers | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-lobby?file=.env.example) |
 | [react-native-push](react-native-push) | Expo, expo-notifications | iOS and Android push: device registration, topics, signed-in users | Development build on a phone |
 
+## Live demos
+
+[hibira-io.github.io/examples](https://hibira-io.github.io/examples/) runs
+nextjs-lobby and nextjs-dashboard in your browser, in seven languages. Open
+a demo in two tabs, or send its link to a friend, to see it sync. They are
+these same apps built as static pages (`.github/workflows/pages.yml`):
+with `NEXT_PUBLIC_DEMO_API` set, `next build` exports only the
+`*.demo.tsx` routes, and the auth and server calls go to Hibira's demo
+backend instead of the app's own API routes, which need your secret.
+
 ## Get credentials
 
 1. Sign up at [hibira.io](https://hibira.io/portal) and create an app.

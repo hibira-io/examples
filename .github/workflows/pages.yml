@@ -1,0 +1,59 @@
+name: pages
+# The hosted demos on GitHub Pages (https://hibira-io.github.io/examples/):
+# each Next.js example built as a static export (NEXT_PUBLIC_DEMO_API, see
+# its next.config.ts) under its own path, plus the index in pages/. The
+# server side runs on Hibira's demo backend, so this needs no secrets.
+#
+# Deploys from main once the repository variable PAGES_ENABLED is "true"
+# (Settings → Pages → Source: GitHub Actions first); before that, and on
+# pull requests, it only checks that the demos build.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_PUBLIC_DEMO_API: ${{ vars.DEMO_API_URL || 'https://demo-api.hibira.io' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: build the demos
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          cp -r pages/. site/
+          for app in nextjs-lobby nextjs-dashboard; do
+            (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npx next build)
+            cp -r "$app/out" "site/$app"
+          done
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

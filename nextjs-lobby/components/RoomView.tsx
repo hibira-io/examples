@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type Pusher from 'pusher-js';
 import { Room, type ChatMessage, type Member } from '@hibira-io/lobby';
+import { useT } from './I18n';
 import { CAPACITY, newGame, ROUND_WINDOW, roundWinner, TAP_EVENT, type GameStart, type Tap } from '@/lib/game';
 
 interface Props {
@@ -24,6 +25,7 @@ type Stage =
   | { kind: 'over' };
 
 export default function RoomView({ pusher, channel, code, onLeave }: Props) {
+  const t = useT();
   const roomRef = useRef<Room<Info> | null>(null);
   const [, render] = useState(0);
   const [stage, setStage] = useState<Stage>({ kind: 'lobby' });
@@ -41,13 +43,13 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
     roomRef.current = room;
     const update = () => render((n) => n + 1);
     for (const ev of ['ready', 'members', 'host', 'settings', 'message', 'typing'] as const) room.on(ev, update);
-    room.on('full', () => onLeave(`Room ${code} is full.`));
-    room.on('kicked', () => onLeave('The host removed you from the room.'));
+    room.on('full', () => onLeave(t.roomFull(code)));
+    room.on('kicked', () => onLeave(t.kicked));
     room.on('start', ({ data }) => play(data as GameStart));
     room.on('error', (err) => console.warn(err));
     // The auth endpoint refuses a full room before the subscription starts.
     room.channel.bind('pusher:subscription_error', (e: { status?: number }) =>
-      onLeave(e?.status === 403 ? `Room ${code} is full.` : 'Could not join the room.'),
+      onLeave(e?.status === 403 ? t.roomFull(code) : t.joinFailed),
     );
     room.channel.bind(TAP_EVENT, (tap: Tap, meta?: { user_id?: string }) => {
       if (meta?.user_id) record(meta.user_id, tap);
@@ -79,27 +81,27 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
   function play(game: GameStart) {
     clearTimers();
     setScores({});
-    let t = 0;
+    let at = 0;
     game.delays.forEach((delay, round) => {
       timers.current.push(
         setTimeout(() => {
           setTaps(new Map());
           setStage({ kind: 'wait', round });
-        }, t),
+        }, at),
       );
-      t += delay;
-      timers.current.push(setTimeout(() => setStage({ kind: 'go', round, at: performance.now() }), t));
-      t += ROUND_WINDOW;
+      at += delay;
+      timers.current.push(setTimeout(() => setStage({ kind: 'go', round, at: performance.now() }), at));
+      at += ROUND_WINDOW;
       timers.current.push(
         setTimeout(() => {
           const winner = roundWinner(tapsRef.current);
           if (winner) setScores((s) => ({ ...s, [winner]: (s[winner] ?? 0) + 1 }));
           setStage({ kind: 'result', round, winner });
-        }, t),
+        }, at),
       );
-      t += 1500;
+      at += 1500;
     });
-    timers.current.push(setTimeout(() => setStage({ kind: 'over' }), t));
+    timers.current.push(setTimeout(() => setStage({ kind: 'over' }), at));
   }
 
   function tap() {
@@ -107,22 +109,22 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
     const s = stageRef.current;
     if (s.kind !== 'wait' && s.kind !== 'go') return;
     if (tapsRef.current.has(room.myID)) return;
-    const t: Tap = { round: s.round, ms: s.kind === 'go' ? Math.round(performance.now() - s.at) : -1 };
+    const mine: Tap = { round: s.round, ms: s.kind === 'go' ? Math.round(performance.now() - s.at) : -1 };
     // Client events are not echoed to the sender, so record our own tap here.
-    room.channel.trigger(TAP_EVENT, t);
-    record(room.myID, t);
+    room.channel.trigger(TAP_EVENT, mine);
+    record(room.myID, mine);
   }
 
   if (!room || !room.ready) {
     return (
       <main className="lobby">
-        <p className="muted">Joining room {code}…</p>
+        <p className="muted">{t.joining(code)}</p>
       </main>
     );
   }
 
   const players = room.players;
-  const name = (id: string | null) => (id ? (room.players.find((p) => p.id === id)?.info?.name ?? 'Someone') : '');
+  const name = (id: string | null) => (id ? (room.players.find((p) => p.id === id)?.info?.name ?? t.someone) : '');
   const playing = stage.kind !== 'lobby' && stage.kind !== 'over';
   const canStart = room.isHost && players.length >= 2 && room.allReady && !playing;
   const typing = room.typing.map((id) => name(id)).filter(Boolean);
@@ -132,31 +134,29 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
       <header>
         <div>
           <h1>
-            Room <span className="code">{code}</span>
+            {t.room} <span className="code">{code}</span>
           </h1>
-          <p className="muted">Send this page's link to a friend to play together.</p>
+          <p className="muted">{t.shareHint}</p>
         </div>
-        <button onClick={() => onLeave()}>Leave</button>
+        <button onClick={() => onLeave()}>{t.leave}</button>
       </header>
 
       <div className="grid">
         <section className="card">
-          <h2>
-            Players {players.length}/{CAPACITY}
-          </h2>
+          <h2>{t.players(players.length, CAPACITY)}</h2>
           <ul className="players">
             {players.map((p: Member<Info>) => (
               <li key={p.id} className={p.me ? 'me' : undefined}>
                 <span>
-                  {p.info?.name ?? 'Player'}
-                  {p.host && <span className="badge">host</span>}
-                  {p.me && <span className="badge">you</span>}
+                  {p.info?.name ?? t.player}
+                  {p.host && <span className="badge">{t.host}</span>}
+                  {p.me && <span className="badge">{t.you}</span>}
                 </span>
                 <span className="score">{scores[p.id] ?? 0}</span>
-                <span className={p.ready ? 'ready' : 'muted'}>{p.ready ? 'Ready' : 'Not ready'}</span>
+                <span className={p.ready ? 'ready' : 'muted'}>{p.ready ? t.ready : t.notReady}</span>
                 {room.isHost && !p.me && (
-                  <button className="link" onClick={() => room.kick(p.id)} title="Remove from room">
-                    Remove
+                  <button className="link" onClick={() => room.kick(p.id)} title={t.removeTitle}>
+                    {t.remove}
                   </button>
                 )}
               </li>
@@ -164,42 +164,42 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
           </ul>
           <div className="row">
             <button onClick={() => room.setReady(!room.me?.ready)} disabled={playing}>
-              {room.me?.ready ? 'Not ready' : "I'm ready"}
+              {room.me?.ready ? t.notReady : t.imReady}
             </button>
             {room.isHost ? (
               <button className="primary" disabled={!canStart} onClick={() => room.start(newGame())}>
-                {stage.kind === 'over' ? 'Play again' : 'Start game'}
+                {stage.kind === 'over' ? t.playAgain : t.startGame}
               </button>
             ) : (
-              <span className="muted">Waiting for {name(room.host?.id ?? null)} to start</span>
+              <span className="muted">{t.waitingFor(name(room.host?.id ?? null))}</span>
             )}
           </div>
           {room.isHost && !canStart && !playing && (
-            <p className="muted small">The game starts when at least two players are in and everyone is ready.</p>
+            <p className="muted small">{t.startHint}</p>
           )}
         </section>
 
         <section className="card arena">
           <button className={`pad ${stage.kind}`} onPointerDown={tap} disabled={!playing}>
-            {stage.kind === 'lobby' && 'Get ready'}
-            {stage.kind === 'wait' && 'Wait for it…'}
+            {stage.kind === 'lobby' && t.getReady}
+            {stage.kind === 'wait' && t.waitForIt}
             {stage.kind === 'go' && (room.myID && taps.has(room.myID) ? `${taps.get(room.myID)} ms` : 'GO!')}
-            {stage.kind === 'result' && (stage.winner ? `${name(stage.winner)} wins round ${stage.round + 1}` : 'No winner')}
-            {stage.kind === 'over' && `Game over: ${name(leader(scores)) || 'nobody'} wins`}
+            {stage.kind === 'result' && (stage.winner ? t.roundWinner(name(stage.winner), stage.round + 1) : t.noWinner)}
+            {stage.kind === 'over' && t.gameOver(name(leader(scores)) || t.nobody)}
           </button>
-          {room.myID && taps.get(room.myID) === -1 && <p className="notice">Too early! Wait for “GO!”.</p>}
+          {room.myID && taps.get(room.myID) === -1 && <p className="notice">{t.tooEarly}</p>}
         </section>
 
         <section className="card chat">
-          <h2>Chat</h2>
+          <h2>{t.chat}</h2>
           <ul className="messages">
             {room.messages.map((m: ChatMessage<Info>) => (
               <li key={m.id} className={m.mine ? 'mine' : undefined}>
-                <strong>{m.info?.name ?? 'Player'}</strong> {m.text}
+                <strong>{m.info?.name ?? t.player}</strong> {m.text}
               </li>
             ))}
           </ul>
-          <p className="muted small typing">{typing.length > 0 && `${typing.join(', ')} typing…`}</p>
+          <p className="muted small typing">{typing.length > 0 && t.typing(typing.join(', '))}</p>
           <form
             className="row"
             onSubmit={(e) => {
@@ -210,8 +210,8 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
             }}
           >
             <input
-              aria-label="Message"
-              placeholder="Say something"
+              aria-label={t.message}
+              placeholder={t.saySomething}
               value={draft}
               maxLength={200}
               onChange={(e) => {
@@ -219,7 +219,7 @@ export default function RoomView({ pusher, channel, code, onLeave }: Props) {
                 room.sendTyping();
               }}
             />
-            <button type="submit">Send</button>
+            <button type="submit">{t.send}</button>
           </form>
         </section>
       </div>
