@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { Space, LockedError, type Member, type Lock } from '@hibira-io/spaces';
-import { COLORS, DOC_PREFIX, SECTIONS, newCode, validCode } from '@/lib/plan';
+import { COLORS, DOC_PREFIX, SECTIONS, newCode, pick, validCode } from '@/lib/plan';
 
 interface Props {
   appKey: string;
@@ -39,8 +39,8 @@ function loadUser(): User {
   } catch {}
   const user = {
     id: crypto.randomUUID(),
-    name: NAMES[Math.floor(Math.random() * NAMES.length)],
-    color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    name: pick(NAMES),
+    color: pick(COLORS),
   };
   localStorage.setItem('planner-user', JSON.stringify(user));
   return user;
