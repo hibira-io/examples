@@ -5,7 +5,12 @@ export const DOC_PREFIX = 'presence-plan-';
 
 /** A random item of `list`. Plan codes are the only key to a plan, so they come from the crypto RNG. */
 export function pick<T>(list: ArrayLike<T>): T {
-  return list[crypto.getRandomValues(new Uint32Array(1))[0] % list.length];
+  // Draw again when the value falls in the last partial block, so every item is equally likely.
+  const limit = 2 ** 32 - (2 ** 32 % list.length);
+  const buf = new Uint32Array(1);
+  do crypto.getRandomValues(buf);
+  while (buf[0] >= limit);
+  return list[buf[0] % list.length];
 }
 
 export function newCode(): string {
