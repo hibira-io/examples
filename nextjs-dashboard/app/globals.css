@@ -199,6 +199,8 @@ button.secondary {
 }
 .topbar-links {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 12px;
+  white-space: nowrap;
 }

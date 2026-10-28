@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { Space, LockedError, type Member, type Lock } from '@hibira-io/spaces';
 import { COLORS, DOC_PREFIX, SECTIONS, newCode, pick, validCode } from '@/lib/plan';
+import { endpoint } from '@/lib/demo';
+import { useT } from './I18n';
 
 interface Props {
   appKey: string;
@@ -52,6 +54,7 @@ const FIELD_EVENT = 'client-plan-field';
 const STATE_EVENT = 'client-plan-state';
 
 export default function Planner({ appKey, host, port, tls }: Props) {
+  const t = useT();
   const [user, setUser] = useState<User | null>(null);
   const [code, setCode] = useState('');
   const [members, setMembers] = useState<PlanMember[]>([]);
@@ -89,7 +92,7 @@ export default function Planner({ appKey, host, port, tls }: Props) {
       forceTLS: tls,
       enabledTransports: ['ws', 'wss'],
       channelAuthorization: {
-        endpoint: '/api/hibira/auth',
+        endpoint: endpoint('/api/hibira/auth', '/spaces/auth'),
         transport: 'ajax',
         params: { user_id: user.id, name: user.name },
       },
@@ -172,7 +175,7 @@ export default function Planner({ appKey, host, port, tls }: Props) {
     } catch (err) {
       if (err instanceof LockedError) {
         el.blur();
-        setNotice(`${space.member(err.holder)?.info?.name ?? 'Someone'} is editing this field.`);
+        setNotice(t.fieldLocked(space.member(err.holder)?.info?.name ?? t.someone));
       }
     }
   }
@@ -190,23 +193,23 @@ export default function Planner({ appKey, host, port, tls }: Props) {
     <main className="planner">
       <header>
         <div>
-          <h1>Shared trip planner</h1>
+          <h1>{t.title}</h1>
           <p className="muted">
-            Plan <span className="code">{code}</span>. Open{' '}
+            {t.plan} <span className="code">{code}</span>. {t.openBefore}
             <a href={share} target="_blank" rel="noreferrer">
-              this link
-            </a>{' '}
-            in another tab or on your phone to plan together.
+              {t.thisLink}
+            </a>
+            {t.openAfter}
           </p>
         </div>
-        <ul className="avatars" aria-label="Who's here">
+        <ul className="avatars" aria-label={t.whosHere}>
           {members.map((m) => (
             <li key={m.id}>
               <button
                 className={`avatar${following === m.id ? ' following' : ''}`}
                 style={{ background: m.profile.color }}
                 disabled={m.me}
-                title={m.me ? `${m.info?.name} (you)` : `Follow ${m.info?.name}`}
+                title={m.me ? t.you(m.info?.name ?? '') : t.follow(m.info?.name ?? '')}
                 onClick={() => setFollowing(following === m.id ? null : m.id)}
               >
                 {m.info?.name?.[0] ?? '?'}
@@ -218,9 +221,9 @@ export default function Planner({ appKey, host, port, tls }: Props) {
 
       {following && (
         <p className="notice">
-          Following {members.find((m) => m.id === following)?.info?.name}.{' '}
+          {t.following(members.find((m) => m.id === following)?.info?.name ?? '')}{' '}
           <button className="link" onClick={() => setFollowing(null)}>
-            Stop
+            {t.stop}
           </button>
         </p>
       )}
@@ -230,7 +233,7 @@ export default function Planner({ appKey, host, port, tls }: Props) {
           const people = members.filter((m) => !m.me && m.location === s.id);
           return (
             <button key={s.id} className={s.id === tab ? 'active' : ''} onClick={() => chooseTab(s.id)}>
-              {s.label}
+              {t.sections[s.id as keyof typeof t.sections] ?? s.label}
               {people.map((m) => (
                 <span key={m.id} className="dot" style={{ background: m.profile.color }} />
               ))}
@@ -259,10 +262,10 @@ export default function Planner({ appKey, host, port, tls }: Props) {
           return (
             <label key={f.id} className="field">
               <span>
-                {f.label}
+                {t.fields[f.id as keyof typeof t.fields] ?? f.label}
                 {other && (
                   <em className="editing" style={{ background: other.profile.color }}>
-                    {other.info?.name} is editing
+                    {t.editing(other.info?.name ?? '')}
                   </em>
                 )}
               </span>
@@ -288,10 +291,7 @@ export default function Planner({ appKey, host, port, tls }: Props) {
       </div>
 
       {notice && <p className="notice">{notice}</p>}
-      <p className="muted small">
-        Click someone&apos;s avatar to follow them between sections. A field someone is typing in is locked for
-        everyone else until they leave it.
-      </p>
+      <p className="muted small">{t.help}</p>
     </main>
   );
 }

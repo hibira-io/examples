@@ -15,7 +15,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 ## Live demos
 
 [hibira-io.github.io/examples](https://hibira-io.github.io/examples/) runs
-nextjs-lobby and nextjs-dashboard in your browser, in seven languages. Open
+nextjs-lobby, nextjs-dashboard and nextjs-spaces in your browser, in seven languages. Open
 a demo in two tabs, or send its link to a friend, to see it sync. They are
 these same apps built as static pages (`.github/workflows/pages.yml`):
 with `NEXT_PUBLIC_DEMO_API` set, `next build` exports only the
