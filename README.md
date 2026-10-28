@@ -8,6 +8,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 |---|---|---|---|
 | [laravel-chat](laravel-chat) | Laravel 13, Echo, Vite | Presence rooms, broadcast events, typing indicators with client events | `php artisan serve` |
 | [nextjs-dashboard](nextjs-dashboard) | Next.js 16, pusher-js | Server-side triggers, a live dashboard in every open tab, a large presence viewer count | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-dashboard?file=.env.example) |
+| [nextjs-games](nextjs-games) | Next.js 16, @hibira-io/lobby | Three small multiplayer games on client events: a shared pixel canvas, draw & guess, Connect Four | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-games?file=.env.example) |
 | [nextjs-lobby](nextjs-lobby) | Next.js 16, @hibira-io/lobby | A playable multiplayer game: room list, seats, host, ready, chat, game events between browsers | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-lobby?file=.env.example) |
 | [nextjs-spaces](nextjs-spaces) | Next.js 16, @hibira-io/spaces | A shared form: who's here, live cursors, field locks, follow mode | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-spaces?file=.env.example) |
 | [react-native-push](react-native-push) | Expo, expo-notifications | iOS and Android push: device registration, topics, signed-in users | Development build on a phone |
@@ -15,7 +16,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 ## Live demos
 
 [hibira-io.github.io/examples](https://hibira-io.github.io/examples/) runs
-nextjs-lobby, nextjs-dashboard and nextjs-spaces in your browser, in seven languages. Open
+nextjs-lobby, nextjs-dashboard, nextjs-spaces and nextjs-games in your browser, in seven languages. Open
 a demo in two tabs, or send its link to a friend, to see it sync. They are
 these same apps built as static pages (`.github/workflows/pages.yml`):
 with `NEXT_PUBLIC_DEMO_API` set, `next build` exports only the
