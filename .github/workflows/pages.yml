@@ -4,9 +4,8 @@ name: pages
 # its next.config.ts) under its own path, plus the index in pages/. The
 # server side runs on Hibira's demo backend, so this needs no secrets.
 #
-# Deploys from main once the repository variable PAGES_ENABLED is "true"
-# (Settings → Pages → Source: GitHub Actions first); before that, and on
-# pull requests, it only checks that the demos build.
+# Deploys from main (Settings → Pages → Source: GitHub Actions); on pull
+# requests it only checks that the demos build.
 on:
   push:
     branches: [main]
@@ -46,7 +45,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       pages: write
