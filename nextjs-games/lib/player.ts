@@ -1,3 +1,5 @@
+import { randomInt } from './random';
+
 // The player's ID and name live in this browser only, shared by the three
 // games. A real app has a signed-in user instead.
 
@@ -13,7 +15,7 @@ export function loadPlayer(): Player {
     const saved = JSON.parse(localStorage.getItem('player') ?? 'null');
     if (saved?.id && saved?.name) return saved;
   } catch {}
-  const player = { id: crypto.randomUUID(), name: NAMES[Math.floor(Math.random() * NAMES.length)] };
+  const player = { id: crypto.randomUUID(), name: NAMES[randomInt(NAMES.length)] };
   savePlayer(player);
   return player;
 }

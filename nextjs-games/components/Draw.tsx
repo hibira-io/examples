@@ -8,6 +8,7 @@ import { useLang, useT } from './I18n';
 import type { RoomProps } from './Rooms';
 import { useRoom, type Info } from './useRoom';
 import { ROOM_GAMES } from '@/lib/games';
+import { randomInt } from '@/lib/random';
 import {
   answerHashes, BATCH_MS, CLEAR_EVENT, COLORS, CORRECT_EVENT, DRAWER_POINTS, guessPoints, isAnswer, nextDrawer,
   REVEAL_EVENT, REVEAL_MS, ROUND_MS, SCALE, STATE_EVENT, STROKES_EVENT, WIDTHS, WORD_EVENT, WORDS, wordIn,
@@ -178,7 +179,7 @@ export default function Draw(props: RoomProps) {
     render();
     const mine = s.drawer === me();
     if (mine && s.phase === 'drawing' && g.current.word === null) {
-      const word = Math.floor(Math.random() * WORDS.length);
+      const word = randomInt(WORDS.length);
       g.current.word = word;
       const hashes = await answerHashes(word, salt(s.round));
       if (g.current.state.round !== s.round) return;

@@ -1,3 +1,5 @@
+import { randomInt } from './random';
+
 // The channels of the three games. Everything a game does travels as client
 // events between the browsers on these channels; the server side only signs
 // subscriptions (app/api/hibira/auth/route.ts) and lists rooms.
@@ -17,7 +19,7 @@ export type RoomGame = keyof typeof ROOM_GAMES;
 
 export function roomCode(): string {
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  return Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+  return Array.from({ length: 4 }, () => letters[randomInt(letters.length)]).join('');
 }
 
 export function validCode(code: string): boolean {
