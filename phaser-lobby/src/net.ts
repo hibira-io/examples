@@ -1,4 +1,5 @@
 import Pusher from 'pusher-js';
+import { randomInt } from './random';
 
 // Connection settings and the backend's endpoints. Locally they come from
 // .env.local and nextjs-lobby (through the dev server's /api proxy); a hosted
@@ -50,7 +51,7 @@ export function loadPlayer(): Player {
     const saved = JSON.parse(localStorage.getItem('player') ?? 'null');
     if (saved?.id && saved?.name) return saved;
   } catch {}
-  return { id: crypto.randomUUID(), name: NAMES[crypto.getRandomValues(new Uint32Array(1))[0] % NAMES.length] };
+  return { id: crypto.randomUUID(), name: NAMES[randomInt(NAMES.length)] };
 }
 
 export function savePlayer(p: Player) {

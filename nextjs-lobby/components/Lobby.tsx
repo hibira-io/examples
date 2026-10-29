@@ -5,6 +5,7 @@ import Pusher from 'pusher-js';
 import RoomView from './RoomView';
 import { CAPACITY, ROOM_PREFIX, roomCode, validCode } from '@/lib/game';
 import { endpoint } from '@/lib/demo';
+import { randomInt } from '@/lib/random';
 import { useT } from './I18n';
 
 interface Props {
@@ -33,7 +34,7 @@ function loadPlayer(): Player {
     const saved = JSON.parse(localStorage.getItem('player') ?? 'null');
     if (saved?.id && saved?.name) return saved;
   } catch {}
-  return { id: crypto.randomUUID(), name: NAMES[crypto.getRandomValues(new Uint32Array(1))[0] % NAMES.length] };
+  return { id: crypto.randomUUID(), name: NAMES[randomInt(NAMES.length)] };
 }
 
 export default function Lobby({ appKey, host, port, tls }: Props) {
