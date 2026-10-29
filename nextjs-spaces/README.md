@@ -44,8 +44,9 @@ app saves the plan in its database and loads it on open.
    npm run dev
    ```
 
-4. Open <http://localhost:3000> and open the plan's link in a second tab or
-   on your phone.
+4. Open <http://localhost:3000> and open the plan's link in a private
+   window, another browser or on your phone (tabs of one browser share a
+   user).
 
 On StackBlitz, create `.env.local` in the file tree with the same values,
 then restart the dev server from the terminal.
