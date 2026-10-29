@@ -50,7 +50,7 @@ export function loadPlayer(): Player {
     const saved = JSON.parse(localStorage.getItem('player') ?? 'null');
     if (saved?.id && saved?.name) return saved;
   } catch {}
-  return { id: crypto.randomUUID(), name: NAMES[Math.floor(Math.random() * NAMES.length)] };
+  return { id: crypto.randomUUID(), name: NAMES[crypto.getRandomValues(new Uint32Array(1))[0] % NAMES.length] };
 }
 
 export function savePlayer(p: Player) {
