@@ -41,7 +41,8 @@ which must never ship inside a game. This example uses nextjs-lobby's:
    ```
 
 4. Open <http://localhost:5173>, create a room, and open the room's link in
-   a second tab, or open <http://localhost:3000/?room=CODE> to join from the
+   another browser or a private window (tabs of one browser share a
+   player), or open <http://localhost:3000/?room=CODE> there to join from the
    browser version. Both players press **I'm ready**, and the host presses
    **Start game**. Tap the circle or press Space after "GO!".
 

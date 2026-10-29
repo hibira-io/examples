@@ -43,7 +43,8 @@ and room chat with typing indicators. No game server, no database.
    ```
 
 4. Open <http://localhost:3000>, create a room, and open the room's link in a
-   second tab or on your phone. Both players press **I'm ready**, then the
+   private window, another browser or on your phone (tabs of one browser share
+   a player). Both players press **I'm ready**, then the
    host presses **Start game**.
 
 On StackBlitz, create `.env.local` in the file tree with the same values,
