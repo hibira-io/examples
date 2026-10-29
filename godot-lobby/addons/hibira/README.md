@@ -14,14 +14,20 @@ extension, so it runs on every platform Godot exports to, the web included.
   [@hibira-io/lobby](https://github.com/hibira-io/lobby-js), so Godot and
   browser players can share a room.
 
-Requires Godot 4.3 or later (tested on 4.7).
+Requires Godot 4.3 or later (CI runs 4.3 and 4.7).
+
+For a complete game, see
+[godot-lobby](https://github.com/hibira-io/examples/tree/main/godot-lobby):
+rooms, chat and a reaction game that Godot and browser players can play
+together.
 
 ## Install
 
-Copy `addons/hibira` into your project's `addons/` folder, then turn it on in
-**Project → Project Settings → Plugins**. `HibiraClient`, `HibiraChannel` and
-`HibiraRoom` are global classes, so they are available as soon as the files
-are in the project.
+Copy the `addons/hibira` folder from this repository (or from a
+[release](https://github.com/hibira-io/godot/releases) download) into your
+project's `addons/` folder, then turn it on in **Project → Project Settings →
+Plugins**. `HibiraClient`, `HibiraChannel` and `HibiraRoom` are global
+classes, so they are available as soon as the files are in the project.
 
 ## Connect and listen
 
@@ -139,6 +145,16 @@ user sign-in (`pusher:signin`).
 Hibira's limits apply as for any client: client events are limited to 10 per
 second per connection and 10 KB each, and presence channels hold up to 100
 members.
+
+## Development
+
+```sh
+godot --headless --import
+godot --headless --script res://tests/test_protocol.gd
+```
+
+The tests feed Pusher protocol frames to the client and check what it sends
+back, with no network.
 
 ## License
 

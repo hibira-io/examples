@@ -11,8 +11,8 @@ version, so Godot players and browser players can play in the same room.
 
 - **The Hibira addon for Godot** (`addons/hibira`): a Pusher protocol client
   in GDScript, with public, private and presence channels, client events and
-  reconnects. It has [its own README](addons/hibira/README.md); copy the
-  folder into any Godot 4 project.
+  reconnects. This is a copy of [hibira-io/godot](https://github.com/hibira-io/godot);
+  take the addon for your own game from there.
 - **Rooms on presence channels.** `HibiraRoom` turns `presence-room-<CODE>`
   into seats, a host, ready flags, settings, kick, start and chat, with the
   same `client-lobby-*` events as

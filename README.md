@@ -44,7 +44,7 @@ packages:
   lobbies on presence channels
 - [@hibira-io/spaces](https://github.com/hibira-io/spaces-js): who's online,
   live cursors, component locks and follow mode on presence channels
-- [Hibira addon for Godot](godot-lobby/addons/hibira): a Pusher protocol
+- [hibira-io/godot](https://github.com/hibira-io/godot): a Pusher protocol
   client and game rooms in GDScript, for Godot 4
 - [@hibira-io/push-web](https://github.com/hibira-io/hibira-push-web),
   [hibira-push-android](https://github.com/hibira-io/hibira-push-android),
