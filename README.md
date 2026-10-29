@@ -6,6 +6,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 
 | Example | Stack | Shows | Try it |
 |---|---|---|---|
+| [godot-lobby](godot-lobby) | Godot 4, GDScript | The nextjs-lobby game in Godot, with the Hibira addon for Godot: rooms, chat, game events, cross-play with browser players | Open in Godot |
 | [laravel-chat](laravel-chat) | Laravel 13, Echo, Vite | Presence rooms, broadcast events, typing indicators with client events | `php artisan serve` |
 | [nextjs-dashboard](nextjs-dashboard) | Next.js 16, pusher-js | Server-side triggers, a live dashboard in every open tab, a large presence viewer count | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-dashboard?file=.env.example) |
 | [nextjs-games](nextjs-games) | Next.js 16, @hibira-io/lobby | Three small multiplayer games on client events: a shared pixel canvas, draw & guess, Connect Four | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-games?file=.env.example) |
@@ -43,6 +44,8 @@ packages:
   lobbies on presence channels
 - [@hibira-io/spaces](https://github.com/hibira-io/spaces-js): who's online,
   live cursors, component locks and follow mode on presence channels
+- [hibira-io/godot](https://github.com/hibira-io/godot): a Pusher protocol
+  client and game rooms in GDScript, for Godot 4
 - [@hibira-io/push-web](https://github.com/hibira-io/hibira-push-web),
   [hibira-push-android](https://github.com/hibira-io/hibira-push-android),
   [hibira-push-ios](https://github.com/hibira-io/hibira-push-ios): push
