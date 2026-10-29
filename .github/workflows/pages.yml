@@ -1,7 +1,8 @@
 name: pages
 # The hosted demos on GitHub Pages (https://hibira-io.github.io/examples/):
 # each Next.js example built as a static export (NEXT_PUBLIC_DEMO_API, see
-# its next.config.ts) under its own path, plus the index in pages/. The
+# its next.config.ts) under its own path, phaser-lobby built with
+# VITE_DEMO_API, plus the index in pages/. The
 # server side runs on Hibira's demo backend, so this needs no secrets.
 #
 # Deploys from main (Settings → Pages → Source: GitHub Actions); on pull
@@ -39,6 +40,8 @@ jobs:
             (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npx next build)
             cp -r "$app/out" "site/$app"
           done
+          (cd phaser-lobby && npm ci --no-audit --no-fund && VITE_DEMO_API="$NEXT_PUBLIC_DEMO_API" DEMO_BASE_PATH=/examples/phaser-lobby npx vite build)
+          cp -r phaser-lobby/dist site/phaser-lobby
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

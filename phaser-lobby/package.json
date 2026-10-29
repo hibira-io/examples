@@ -1,0 +1,23 @@
+{
+  "name": "hibira-phaser-lobby",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The nextjs-lobby reaction game in Phaser: rooms, seats, host, ready, chat and game events with @hibira-io/lobby, cross-play with browser and Godot players",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hibira-io/lobby": "^0.1.0",
+    "phaser": "^4.2.1",
+    "pusher-js": "^8.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5"
+  }
+}
