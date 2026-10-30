@@ -5,6 +5,8 @@ an order feed and a live count of who is watching.
 
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/hibira-io/examples/tree/main/nextjs-dashboard?file=.env.example)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhibira-io%2Fexamples%2Ftree%2Fmain%2Fnextjs-dashboard&env=HIBIRA_APP_ID,HIBIRA_APP_SECRET,NEXT_PUBLIC_HIBIRA_APP_KEY&envDescription=App%20ID%2C%20secret%20and%20key%20from%20your%20Hibira%20app%20page%20%28the%20free%20plan%20is%20enough%29&envLink=https%3A%2F%2Fhibira.io%2Fportal&project-name=hibira-dashboard)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/hibira-io/examples&base=nextjs-dashboard&create_from_path=nextjs-dashboard)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/hibira-io/examples)
 
 ![Screenshot](screenshot.png)
 
@@ -47,6 +49,12 @@ To put it online, press **Deploy with Vercel** at the top. Vercel copies
 this folder into a new repository in your GitHub account and asks for the
 app ID, secret and key. The API routes run as Vercel functions, and browsers
 connect straight to Hibira, so nothing on Vercel holds a WebSocket open.
+
+Netlify and Render work the same way, and [Zeabur](https://zeabur.com) can deploy it from
+[`deploy/zeabur/nextjs-dashboard.yaml`](../deploy/zeabur/nextjs-dashboard.yaml). Wherever it runs,
+add the site's address (for example `https://hibira-dashboard.vercel.app`) to
+**Allowed origins** in the app's settings on hibira.io, or browsers can't
+connect.
 
 The simulator runs in the tab where you started it: that tab asks the
 server to publish one made-up tick a second. In a real app the server

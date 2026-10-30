@@ -1,0 +1,20 @@
+# Render Blueprint for the "Deploy to Render" button in nextjs-dashboard.
+# Render asks for the values marked sync: false when the button is used.
+services:
+  - type: web
+    name: hibira-dashboard
+    runtime: node
+    plan: free
+    rootDir: nextjs-dashboard
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    autoDeploy: false
+    envVars:
+      - key: HIBIRA_APP_ID
+        sync: false
+      - key: HIBIRA_APP_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_HIBIRA_APP_KEY
+        sync: false
+      - key: NEXT_PUBLIC_HIBIRA_HOST
+        value: ws.hibira.io

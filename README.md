@@ -15,6 +15,11 @@ messaging and push notifications. Each one runs with a free Hibira app
 | [phaser-lobby](phaser-lobby) | Phaser 4, Vite, @hibira-io/lobby | The nextjs-lobby game in Phaser: rooms, chat, game events in a canvas, cross-play with browser and Godot players | `npm run dev` |
 | [react-native-push](react-native-push) | Expo, expo-notifications | iOS and Android push: device registration, topics, signed-in users | Development build on a phone |
 
+The Next.js examples also deploy to Netlify (button in each README),
+Render (`render.yaml`, nextjs-dashboard) and Zeabur (`deploy/zeabur/`).
+On a hosted copy, add its address to the app's **Allowed origins** on
+hibira.io.
+
 ## Live demos
 
 [demos.hibira.io/examples](https://demos.hibira.io/examples/) runs

@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+# Zeabur template for nextjs-lobby. Publish or update it with the Zeabur CLI:
+#   npx zeabur@latest template create -f deploy/zeabur/nextjs-lobby.yaml
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Hibira Game Lobby
+spec:
+  description: "A playable multiplayer game in Next.js: room list, seats, host, ready, chat and game events between browsers, on Hibira presence channels."
+  icon: https://hibira.io/portal/brand/icon-512.png
+  tags:
+    - Realtime
+    - WebSocket
+    - Next.js
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Domain
+      description: The domain this app is served on.
+    - key: HIBIRA_APP_ID
+      type: STRING
+      name: Hibira app ID
+      description: From your app page at https://hibira.io/portal (the free plan is enough, no card).
+    - key: HIBIRA_APP_KEY
+      type: STRING
+      name: Hibira app key
+      description: The app key from the same page.
+    - key: HIBIRA_APP_SECRET
+      type: PASSWORD
+      name: Hibira app secret
+      description: The app secret from the same page. It stays on the server.
+  readme: |
+    # Hibira Game Lobby
+
+    A playable multiplayer game in Next.js: room list, seats, host, ready, chat and game events between browsers, on Hibira presence channels.
+
+    1. Sign up at [hibira.io](https://hibira.io/portal) and create an app (Free plan, no card).
+    2. Copy the app ID, key and secret into this template.
+    3. After deploy, add `https://${PUBLIC_DOMAIN}` to the app's Allowed origins on hibira.io.
+
+    Source: [github.com/hibira-io/examples/tree/main/nextjs-lobby](https://github.com/hibira-io/examples/tree/main/nextjs-lobby)
+  services:
+    - name: lobby
+      template: GIT
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          source: ARBITRARY_GIT
+          gitURL: https://github.com/hibira-io/examples.git
+          branch: main
+          rootDirectory: nextjs-lobby
+        ports:
+          - id: web
+            port: 3000
+            type: HTTP
+        env:
+          HIBIRA_APP_ID:
+            default: ${HIBIRA_APP_ID}
+          HIBIRA_APP_SECRET:
+            default: ${HIBIRA_APP_SECRET}
+          NEXT_PUBLIC_HIBIRA_APP_KEY:
+            default: ${HIBIRA_APP_KEY}
+          NEXT_PUBLIC_HIBIRA_HOST:
+            default: ws.hibira.io
