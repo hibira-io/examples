@@ -1,0 +1,74 @@
+# Local and small deployments: app, queue worker and PostgreSQL.
+#   cp .env.example .env   # fill in HIBIRA_* (and APP_KEY, see README)
+#   docker compose up -d --build
+#   docker compose exec app php artisan demo:reset
+# Then open http://localhost:8000.
+
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-demo}
+      POSTGRES_USER: ${DB_USERNAME:-demo}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-demo}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build: .
+    image: hibira-ai-approvals-demo
+    command: ["web"]
+    env_file: .env
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      RUN_MIGRATIONS: "true"
+      LOG_CHANNEL: stderr
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - storage:/app/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  worker:
+    image: hibira-ai-approvals-demo
+    command: ["worker"]
+    env_file: .env
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      LOG_CHANNEL: stderr
+    volumes:
+      - storage:/app/storage/logs
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      # Unhealthy when jobs wait longer than 120 s: the worker isn't working.
+      test: ["CMD", "php", "artisan", "queue:health", "--max-wait=120"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  storage:
