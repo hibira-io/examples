@@ -101,3 +101,89 @@ jobs:
       - run: cp .env.example .env && php artisan key:generate
       - run: npm ci && npm run build
       - run: php artisan test
+
+  laravel-ai-approvals:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel-ai-approvals
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: demo
+          POSTGRES_PASSWORD: demo
+          POSTGRES_DB: demo_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U demo -d demo_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, pcntl, posix, intl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: composer install --no-interaction --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npm ci && npm run build
+      - run: npm test
+      - run: vendor/bin/pint --test
+      # Feature tests, then the multi-process PostgreSQL concurrency and worker-kill tests.
+      - run: php artisan test
+
+  # Browser E2E over a real Hibira test app. Runs only when the repository
+  # has the HIBIRA_E2E_* secrets (an app whose Allowed origins include
+  # http://127.0.0.1:8000); otherwise it says so and passes.
+  laravel-ai-approvals-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel-ai-approvals
+    env:
+      HIBIRA_APP_ID: ${{ secrets.HIBIRA_E2E_APP_ID }}
+      HIBIRA_APP_KEY: ${{ secrets.HIBIRA_E2E_APP_KEY }}
+      HIBIRA_APP_SECRET: ${{ secrets.HIBIRA_E2E_APP_SECRET }}
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: demo
+          POSTGRES_PASSWORD: demo
+          POSTGRES_DB: demo
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U demo -d demo"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for a Hibira test app
+        id: creds
+        run: |
+          if [ -z "$HIBIRA_APP_KEY" ]; then echo "No HIBIRA_E2E_* secrets: skipping the real-Hibira E2E."; echo "run=false" >> "$GITHUB_OUTPUT"; else echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.creds.outputs.run == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, pcntl, posix, intl
+          coverage: none
+      - if: steps.creds.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - if: steps.creds.outputs.run == 'true'
+        run: |
+          composer install --no-interaction --no-progress
+          cp .env.example .env && php artisan key:generate
+          npm ci && npm run build
+          npx playwright@1.56.1 install --with-deps chromium
+          npm install --no-save playwright@1.56.1
+          php artisan migrate --force && php artisan demo:reset
+          APP_URL=http://127.0.0.1:8000 php artisan serve --host=127.0.0.1 --port=8000 > serve.log 2>&1 &
+          php artisan queue:work --sleep=1 > worker.log 2>&1 &
+          sleep 3
+          BASE_URL=http://127.0.0.1:8000 node tests/e2e/approval-flow.mjs
