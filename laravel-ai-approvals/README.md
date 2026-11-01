@@ -1,159 +1,206 @@
-# Hibira Agent Approvals Demo（AI 客服退款審批）
+# Hibira Agent Approvals Demo
 
-A Laravel 13 + Filament 5 example: a support agent built on the
-[Laravel AI SDK](https://laravel.com/docs/ai-sdk) asks to refund an order,
-two managers see the request live in a Filament inbox
-([hibira-io/filament-approvals](https://github.com/hibira-io/filament-approvals)),
-one of them approves a lower amount, the agent carries on from the queue and
-the customer's chat updates over [Hibira](https://hibira.io). Runs without a
-model API key (Mock mode). The UI is in Traditional Chinese.
+A Laravel 13 + Filament 5 example of an AI support agent that has to ask a person before it refunds money.
 
-這個範例用一個完整的業務流程，展示 Hibira 怎麼串起：
+1. A customer asks to return an order.
+2. The agent, built on the [Laravel AI SDK](https://laravel.com/docs/ai-sdk), proposes a refund.
+3. Two managers see the request live in a Filament inbox ([hibira-io/filament-approvals](https://github.com/hibira-io/filament-approvals)).
+4. One manager approves a lower amount.
+5. The agent carries on from the queue.
+6. The customer's chat updates over [Hibira](https://hibira.io).
 
-- AI agent 的工具呼叫與**人工審批**（Laravel AI SDK 原生的 tool approval）。
-- 多位主管的**即時收件匣**、誰在線上、誰正在看同一筆請求，以及決策同步。
-- 決定之後由 **queue** 接續 agent，執行**冪等的模擬退款**。
-- 客戶畫面的**即時回覆**，以及重新整理、斷線後從後端**恢復業務狀態**。
+It runs without a model API key (Mock mode). The demo UI is in Traditional Chinese.
 
-Hibira 只負責即時傳遞；訂單、審批決策、退款紀錄與 agent 的對話都保存在這個應用自己的 PostgreSQL。
+> 中文說明在本頁最後：[中文摘要](#中文摘要)。
 
-| 畫面 | |
+| Customer waits for a manager | Manager A's inbox, Manager B online |
 |---|---|
-| 客戶：訂單摘要、退款紀錄、與客服 AI 對話 | `/support` |
-| 主管：AI 審批收件匣（filament-approvals） | `/admin/ai-approvals` |
-| 主管：退款操作、訂單（唯讀） | `/admin/refund-operations`、`/admin/orders` |
+| ![Customer page waiting for approval](docs/screenshots/1-customer-waiting.png) | ![Approval inbox with order context and presence](docs/screenshots/2-manager-a-request.png) |
+| **Customer sees the refund live** | **Manager B's view syncs without a reload** |
+| ![Customer page after the refund](docs/screenshots/3-customer-completed.png) | ![Second manager sees the decision](docs/screenshots/4-manager-b-done.png) |
 
-## 最短啟動路徑
+![Refund operations: requested USD 49.00, final USD 29.00](docs/screenshots/5-refund-operations.png)
 
-需要：一個 Hibira app（[hibira.io/portal](https://hibira.io/portal) 建立，免費方案即可、不需信用卡）。
+## What it shows
 
-### 用 Docker（不需要本機 PHP）
+- **Human approval of AI tool calls,** using the Laravel AI SDK's own tool approval.
+- **A live inbox for several managers.** Each manager sees who is online, who is looking at the same request, and decisions as soon as they are made. The first decision is final.
+- **Resuming the agent from the queue** after the decision, followed by an **idempotent simulated refund.** The backend generates one operation ID per refund. A unique constraint and row locks make sure it runs at most once, even after retries or a worker crash.
+- **Live replies on the customer page.** After a reload or reconnect, the page recovers the state from the backend: it fetches a versioned snapshot, and when it finds a gap in the stream it resyncs instead of stitching text together.
+
+Hibira only carries the live updates. Orders, decisions, refunds and the agent's conversation are stored in the app's own PostgreSQL database.
+
+| Screen | Path |
+|---|---|
+| Customer: order summary, refunds, chat with the support agent | `/support` |
+| Manager: AI approvals inbox (filament-approvals) | `/admin/ai-approvals` |
+| Manager: refund operations and orders (read-only) | `/admin/refund-operations`, `/admin/orders` |
+
+## Quick start
+
+You need a Hibira app. Create one at [hibira.io/portal](https://hibira.io/portal); the free plan is enough and needs no card.
+
+### With Docker (no local PHP)
 
 ```sh
 cp .env.example .env
-# 編輯 .env：填入 HIBIRA_APP_ID、HIBIRA_APP_KEY、HIBIRA_APP_SECRET
+# edit .env: HIBIRA_APP_ID, HIBIRA_APP_KEY, HIBIRA_APP_SECRET
 docker compose run --rm --no-deps app php artisan key:generate --show
-# 把印出的 base64:... 貼到 .env 的 APP_KEY=
+# paste the printed base64:... into APP_KEY= in .env
 docker compose up -d --build
 docker compose exec app php artisan demo:reset
 ```
 
-打開 <http://localhost:8000>。`compose.yaml` 會啟動 app、queue worker、PostgreSQL 17（含健康檢查與資料 volume）。
+Open <http://localhost:8000>. `compose.yaml` starts three services, each with a healthcheck: the app, a queue worker, and PostgreSQL 17 on a data volume. The app image runs on [FrankenPHP](https://frankenphp.dev) (`dunglas/frankenphp:1-php8.4`, served with `frankenphp php-server`).
 
-### 用本機 PHP 8.3+、Node 22、PostgreSQL
+### With local PHP 8.3+, Node 22 and PostgreSQL
 
 ```sh
 composer install
 cp .env.example .env && php artisan key:generate
-# 編輯 .env：DB_*（PostgreSQL）與 HIBIRA_APP_ID / HIBIRA_APP_KEY / HIBIRA_APP_SECRET
+# edit .env: DB_* (PostgreSQL) and HIBIRA_APP_ID / HIBIRA_APP_KEY / HIBIRA_APP_SECRET
 php artisan migrate
 php artisan demo:reset
 npm ci && npm run build
 
-php artisan serve          # 終端機 1
-php artisan queue:work     # 終端機 2：agent 的每一輪與審批後的接續都在這裡跑
+php artisan serve          # terminal 1 (or, with FrankenPHP installed: frankenphp php-server --listen 127.0.0.1:8000 --root public/)
+php artisan queue:work     # terminal 2: every agent turn and every resume after a decision runs here
 ```
 
-### Hibira 測試 app 設定
+### Hibira app settings
 
-1. 在 portal 建立 app，從 app 頁複製 **App ID、Key、Secret** 到 `.env`。
-   Secret 只放在伺服器端，瀏覽器只會拿到 key 與 host。
-2. 在 app 的 **Allowed origins** 加上你開啟範例的網址，例如 `http://localhost:8000`。
-   不要為了測試關掉來源檢查。
-3. `php artisan hibira:check` 檢查設定與連線。
-4. （選用）Hibira Push：填 `HIBIRA_PUSH_INSTANCE_ID`、`HIBIRA_PUSH_SECRET_KEY`，
-   沒開收件匣的主管會收到推播。沒有 Push 憑證時主流程照常運作。
+1. Copy the **App ID, Key and Secret** from the app page into `.env`. The secret stays on the server; the browser only gets the key and host.
+2. Add the address you open the demo at, for example `http://localhost:8000`, to the app's **Allowed origins**. Don't turn the origin check off for testing.
+3. Run `php artisan hibira:check` to check the settings and the connection.
+4. (Optional) Hibira Push: set `HIBIRA_PUSH_INSTANCE_ID` and `HIBIRA_PUSH_SECRET_KEY`, and managers who don't have the inbox open get a push notification. Without Push credentials the main flow works the same.
 
-## 登入角色
+## Demo accounts
 
-`php artisan demo:reset` 建立四個示範帳號（密碼都是 `DEMO_PASSWORD`，預設 `demo-password`）與一筆訂單
-**DEMO-1042**（已付款 USD 49.00，已退款 0）。
+`php artisan demo:reset` creates the four accounts below and one order, **DEMO-1042**: USD 49.00 paid, nothing refunded yet. Every account's password is `DEMO_PASSWORD` (default `demo-password`).
 
-| 帳號 | 角色 | 可以做什麼 |
+| Account | Role | Can |
 |---|---|---|
-| `customer@demo.test` | 客戶 | 看自己的訂單、提出退款、看客服回覆 |
-| `manager.a@demo.test` | 主管 A | Filament 審批收件匣：批准、修改金額、拒絕 |
-| `manager.b@demo.test` | 主管 B | 同上，用來示範兩位主管同步 |
-| `outsider@demo.test` | 無權限 | 什麼都不能看，用來測授權 |
+| `customer@demo.test` | Customer | See their order, ask for a refund, read the agent's replies |
+| `manager.a@demo.test` | Manager A | Use the Filament approvals inbox: approve, edit the amount, reject |
+| `manager.b@demo.test` | Manager B | The same; shows two managers in sync |
+| `outsider@demo.test` | No access | Nothing; used to test authorization |
 
-`DEMO_MODE=true` 時登入頁會出現一鍵登入按鈕（只列這四個帳號）。`APP_ENV=production` 時一律關閉，
-`DatabaseSeeder` 也不會建立任何帳號：示範帳號只能用 `demo:reset` 在非 production 環境建立。
+With `DEMO_MODE=true` the login page shows one-click buttons for these four accounts only. Demo accounts can only be created with `demo:reset` outside production:
 
-## 操作步驟
+- With `APP_ENV=production`, the one-click login is always off.
+- `DatabaseSeeder` never creates accounts.
 
-1. 一個瀏覽器以**客戶**登入，打開 `/support`。另外兩個瀏覽器（或無痕視窗）以**主管 A**、**主管 B** 登入，進到「AI 審批」。
-   兩位主管會看到「另有 1 位審查者在線上」。
-2. 客戶輸入「我想退掉這筆訂單」。客服 AI 查詢訂單，提出 USD 49.00 的退款並說明要等主管審批；輸入框鎖住。
-3. 兩位主管的收件匣同時出現這筆請求，上方顯示訂單已付、已退、可退金額。兩人都打開它時，會看到「正在一起審查」。
-4. 主管可以：**核准**原金額；**修改**，把 `"amount": 4900` 改成 `2900` 後「用這些參數執行」；或**拒絕**並寫理由。
-5. 決定送出後，queue worker 接續 agent：核准就寫入退款紀錄，拒絕就不退款，agent 把結果告訴客戶。
-6. 客戶畫面即時更新為「已完成」或「已拒絕」，訂單的已退金額同步改變。重新整理後一切都還在。
+## Walkthrough
 
-90 秒的展示腳本見 [docs/demo-script.md](docs/demo-script.md)。
+1. Sign in as the **customer** in one browser and open `/support`. Sign in as **Manager A** and **Manager B** in two other browsers (or private windows) and open the AI approvals page. Each manager sees that one other reviewer is online.
+2. The customer types 「我想退掉這筆訂單」 ("I'd like to return this order"). The agent looks up the order, proposes a USD 49.00 refund and says it is waiting for a manager. The input is locked meanwhile.
+3. The request appears in both inboxes at once, with the order's paid, refunded and refundable amounts above it. When both managers open it, each sees the other reviewing it too.
+4. A manager can do one of three things:
+   - **Approve** the original amount.
+   - **Edit** the tool arguments, changing `"amount": 4900` to `2900`, and run it.
+   - **Reject** it with a reason.
+5. After the decision, the queue worker resumes the agent. An approval writes the refund; a rejection refunds nothing. Either way, the agent tells the customer the result.
+6. The customer page updates live to completed or rejected, and the order's refunded amount changes. Everything is still there after a reload.
 
-## Mock 與 Live 模式
+A 90-second demo script is in [docs/demo-script.md](docs/demo-script.md).
 
-| | Mock（預設） | Live（選用） |
+## Mock and Live modes
+
+| | Mock (default) | Live (optional) |
 |---|---|---|
-| 設定 | `AI_PROVIDER=demo-mock` | `AI_PROVIDER=gemini` + `GEMINI_API_KEY`，或 `openai` + `OPENAI_API_KEY`，或 config/ai.php 裡任一 Laravel AI SDK provider |
-| 模型 | `App\Ai\Mock\MockSupportGateway` 依對話內容產生固定的工具呼叫與回覆 | 真實模型；`AI_MODEL` 可指定，留空用 SDK 的預設模型 |
-| 其他一切 | 相同：SDK 的工具驗證、審批暫停、對話保存、接續、queue、Hibira | 相同 |
+| Setting | `AI_PROVIDER=demo-mock` | `AI_PROVIDER=gemini` + `GEMINI_API_KEY`, `openai` + `OPENAI_API_KEY`, or any Laravel AI SDK provider in `config/ai.php` |
+| Model | `App\Ai\Mock\MockSupportGateway` returns fixed tool calls and replies based on the conversation | A real model; set `AI_MODEL` or leave it empty for the SDK default |
+| Everything else | The same: SDK tool validation, approval pause, stored conversation, resume, queue, Hibira | The same |
 
-Mock 模式**只替換模型的輸出**：它是一個 `StepTextGateway`，註冊成 `demo-mock` provider（`AppServiceProvider`）。
-工具、審批、資料庫、queue 與 Hibira 通訊都是真的，所以不需要 API key 也能完整重現流程。
-無論哪個模式，模型都只能呼叫模擬退款工具，模型金鑰只在伺服器端使用。
+Mock mode **replaces only the model's output.** It is a `StepTextGateway` registered as the `demo-mock` provider in `AppServiceProvider`. Tools, approvals, the database, the queue and Hibira are all real, so the whole flow works without an API key. In both modes the model can only call the simulated refund tool, and model keys are only used on the server.
 
 ```sh
-php artisan demo:reset && php artisan demo:smoke            # 不開瀏覽器跑一次完整流程（Mock）
-php artisan demo:reset && AI_PROVIDER=gemini php artisan demo:smoke   # 用真實模型檢查 Live 模式
+php artisan demo:reset && php artisan demo:smoke                       # the whole flow without a browser (Mock)
+php artisan demo:reset && AI_PROVIDER=gemini php artisan demo:smoke    # check Live mode with a real model
 ```
 
-失敗路徑也能示範：`DEMO_MOCK_AI_FAILURE=true`（模型呼叫失敗）、`DEMO_MOCK_AI_FAILURE_AFTER_REFUND=true`
-（退款已提交、agent 回覆前失敗，主管在收件匣按「重試」，不會重複退款）。
+You can also demo the failure paths:
 
-## 測試
+- `DEMO_MOCK_AI_FAILURE=true` makes the model call fail.
+- `DEMO_MOCK_AI_FAILURE_AFTER_REFUND=true` makes the agent fail after the refund is committed but before it replies. A manager clicks Retry in the inbox, and the refund does not run twice.
+
+## Tests
 
 ```sh
-npm test                                   # 前端狀態：亂序、重複、缺漏事件、重新連線
-php artisan test --testsuite=Feature       # 流程、金額驗證、授權、重試與恢復（PostgreSQL）
-php artisan test --testsuite=Concurrency   # 多個 PHP process 同時決策／退款；queue:work 在交易前後被 kill
-BASE_URL=http://127.0.0.1:8000 node tests/e2e/approval-flow.mjs   # 三個瀏覽器 context 的 E2E（見下）
+npm test                                   # client state: out-of-order, duplicate and missing events, reconnects
+php artisan test --testsuite=Unit          # money formatting
+php artisan test --testsuite=Feature       # flow, amount validation, authorization, retries and recovery (PostgreSQL)
+php artisan test --testsuite=Concurrency   # separate PHP processes deciding and refunding at once; queue:work killed around the commit
+BASE_URL=http://127.0.0.1:8000 node tests/e2e/approval-flow.mjs   # three-browser E2E (below)
 ```
 
-- Feature 與 Concurrency 測試用 PostgreSQL（`phpunit.xml`：資料庫 `demo_test`，帳密 `demo`/`demo`，可用 `DB_*` 環境變數覆寫）。
-  Feature 測試用 `tests/Support/FakeHibira.php` 記錄送往 Hibira 的事件，不連線。
-- Concurrency 測試啟動多個獨立的 PHP process，各自連 PostgreSQL，在同一時間點出手；worker 測試用 `DEMO_CRASH_AT`
-  讓真的 `queue:work` 在退款交易提交前或後 `SIGKILL` 自己（只在 `APP_ENV=testing` 有效）。
-- E2E 需要執行中的 app、queue worker、`DEMO_MODE=true`、`php artisan demo:reset`，以及真的 WebSocket 伺服器
-  （Hibira 測試 app，Allowed origins 要包含 `BASE_URL`）。它驗證三個瀏覽器的即時同步，並確認更新是從 WebSocket 收到的，
-  不是輪詢。CI 在有 `HIBIRA_E2E_*` secrets 時才跑這一段。
+- **Feature and Concurrency** tests run on PostgreSQL. `phpunit.xml` uses the `demo_test` database with `demo`/`demo`; override with `DB_*` environment variables. Feature tests record what would go to Hibira with `tests/Support/FakeHibira.php` and don't connect.
+- **Concurrency** tests start separate PHP processes, each with its own PostgreSQL connection, that act at the same moment. The worker tests use `DEMO_CRASH_AT` to make a real `queue:work` send itself `SIGKILL` just before or just after the refund transaction commits. This only works with `APP_ENV=testing`.
+- **The E2E test** needs a running app and queue worker, `DEMO_MODE=true`, `php artisan demo:reset`, and a real WebSocket server: a Hibira test app whose Allowed origins include `BASE_URL`. It checks the live sync across three browsers and that the updates came over the WebSocket, not from polling. CI runs it only when the `HIBIRA_E2E_*` secrets are set.
 
-## 排錯
+## Troubleshooting
 
-| 現象 | 檢查 |
+| Symptom | Check |
 |---|---|
-| 客戶頁右上角一直「連線中」或「無法連上即時服務」 | `HIBIRA_APP_KEY`、`HIBIRA_HOST`；app 的 Allowed origins 是否包含目前網址；`php artisan hibira:check` |
-| 收件匣收不到新請求、`/broadcasting/auth` 403 | 是否用主管帳號登入；`HIBIRA_APP_SECRET` 是否正確 |
-| 客戶送出後一直「客服 AI 正在處理」 | `php artisan queue:work` 有沒有在跑；`php artisan queue:health` |
-| 主管決定後一直「繼續中」 | 同上；worker 中斷時請求會變成「失敗」，在收件匣按「重試」 |
-| Live 模式回覆「暫時無法回覆」 | `storage/logs/laravel.log` 的 provider 錯誤（例如 401 是 API key 無效） |
-| 想從頭再來 | `php artisan demo:reset`（只清示範訂單的資料，不是 `migrate:fresh`） |
+| The customer page stays on "connecting" or says it can't reach the live service | `HIBIRA_APP_KEY`, `HIBIRA_HOST`; whether the app's Allowed origins include the current address; `php artisan hibira:check` |
+| No new requests in the inbox, `/broadcasting/auth` returns 403 | Signed in as a manager? Is `HIBIRA_APP_SECRET` correct? |
+| The customer page stays on "the agent is working" | Is `php artisan queue:work` running? `php artisan queue:health` |
+| A request stays on "resuming" after a decision | Same as above; if the worker was interrupted the request turns failed, so click Retry in the inbox |
+| Live mode replies that it can't answer right now | The provider error in `storage/logs/laravel.log` (a 401 means the API key is invalid) |
+| Start over | `php artisan demo:reset` (clears only the demo order's data; not `migrate:fresh`) |
 
-診斷事件（`approval_requested`、`approval_decided`、`agent_resumed`、`refund_completed`、`refund_replayed`、`flow_failed`）
-以 JSON 一行一筆寫在 `storage/logs/diagnostics.log`，只有事件名稱、關聯 ID、狀態與時間，不含對話、工具參數或任何金鑰。
+Diagnostic events are written to `storage/logs/diagnostics.log` as one JSON line each: `approval_requested`, `approval_decided`, `agent_resumed`, `refund_completed`, `refund_replayed` and `flow_failed`. Each line holds only the event name, related IDs, status and time. It never includes the conversation, tool arguments or any key.
 
-## 文件
+## Docs
 
-- [docs/integration.md](docs/integration.md)：在你自己的 Laravel 專案接入審批套件；哪些是必需的整合，哪些只是這個範例的業務。
-- [docs/deployment.md](docs/deployment.md)：環境變數、資產建置、migration、worker、HTTPS、Allowed origins、健康檢查、示範模式邊界。
-- [docs/demo-script.md](docs/demo-script.md)：90 秒展示腳本。
-- [docs/pilot-checklist.md](docs/pilot-checklist.md)：第一批試用者的接入清單、訪談問題與指標定義。
+- [docs/integration.md](docs/integration.md): add the approvals packages to your own Laravel app, and which parts are required integration and which are only this demo's business logic.
+- [docs/deployment.md](docs/deployment.md): environment variables, assets, migrations, the worker, HTTPS, Allowed origins, healthchecks and demo-mode limits.
+- [docs/demo-script.md](docs/demo-script.md): a 90-second demo script.
+- [docs/pilot-checklist.md](docs/pilot-checklist.md): onboarding checklist, interview questions and metric definitions for the first pilot users.
 
-## 版本
+## Versions
 
-PHP 8.3+（Docker 與 CI 用 8.4）、Laravel 13.39、Filament 5.11、Livewire 4.4、laravel/ai 1.3、
-hibira-io/filament-approvals 0.1.1、hibira-io/filament 0.2.3、hibira-io/laravel 0.1.2、PostgreSQL 17.6、
-laravel-echo 2 + pusher-js 8。鎖定檔：`composer.lock`、`package-lock.json`。
+| Component | Version |
+|---|---|
+| PHP | 8.3+ (8.4 in Docker and CI) |
+| FrankenPHP (Docker) | 1.x |
+| Laravel | 13.39 |
+| Filament | 5.11 |
+| Livewire | 4.4 |
+| laravel/ai | 1.3 |
+| hibira-io/filament-approvals | 0.1.1 |
+| hibira-io/filament | 0.2.3 |
+| hibira-io/laravel | 0.1.2 |
+| PostgreSQL | 17.6 |
+| laravel-echo + pusher-js | 2 + 8 |
+
+Versions are locked in `composer.lock` and `package-lock.json`.
+
+## 中文摘要
+
+這是一個 AI 客服退款審批的範例，用 Laravel 13、Filament 5、Laravel AI SDK 和 Hibira 做成。
+
+**流程**
+1. 客戶說「我想退掉這筆訂單」。
+2. AI 查詢訂單後提出退款 USD 49.00。
+3. 兩位主管在 Filament 收件匣即時看到這筆請求，也看得到彼此在線。
+4. 其中一位可以核准、把金額改成 USD 29.00，或填寫原因後駁回。第一個決定就是最終結果。
+5. 背景 queue 接著讓 AI 繼續執行。退款有冪等保護，同一筆不會退兩次。
+6. 客戶頁即時看到結果，重新整理或斷線重連後狀態也不會遺失。
+
+**啟動**
+- 依照上方「Quick start」：`cp .env.example .env`，填入 `HIBIRA_*` 與 `APP_KEY`。
+- 執行 `docker compose up -d --build`，再執行 `docker compose exec app php artisan demo:reset`。
+- Docker 映像使用 FrankenPHP。本機開發時要另外跑 `php artisan queue:work`。
+
+**模型模式**
+- 預設是 Mock 模式，不需要任何模型 API Key。
+- 設定 `AI_PROVIDER` 後可以改用真實模型。
+
+**其他**
+- App secret、模型 API Key 與 Push secret 都只放在伺服器的 `.env`，不會傳到瀏覽器。
+- 示範帳號：客戶、主管 A、主管 B、無權限的路人。密碼是 `DEMO_PASSWORD`。
+- 示範畫面是繁體中文。
 
 ## License
 

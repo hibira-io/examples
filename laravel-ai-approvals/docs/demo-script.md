@@ -1,31 +1,63 @@
-# 90 秒展示腳本
+# 90-second demo script
 
-**畫面配置**：左半邊客戶（手機寬度的瀏覽器視窗），右半邊上下兩個主管視窗（主管 A、主管 B，各自一個瀏覽器或無痕視窗）。
+**Layout:** the customer on the left, in a phone-width browser window. On the right, two manager windows, one above the other: Manager A and Manager B, each in its own browser or private window.
 
-**事前準備**（不計時）
+The demo UI is in Traditional Chinese. UI labels below are quoted in Chinese with the English meaning.
+
+**Before you start** (not timed)
 
 ```sh
-php artisan demo:reset          # DEMO-1042：已付 USD 49.00，已退 0
-php artisan serve
+php artisan demo:reset          # DEMO-1042: USD 49.00 paid, nothing refunded
+php artisan serve               # or: frankenphp php-server --listen 127.0.0.1:8000 --root public/
 php artisan queue:work
 ```
 
-`.env`：`DEMO_MODE=true`、Hibira app 的 Allowed origins 有 `http://localhost:8000`。三個視窗分別在 `/login` 按一鍵登入：
-客戶 →「林小美（客戶）」、主管 A →「王經理」、主管 B →「陳主任」。主管兩個視窗停在「AI 審批」。
+**Setup:**
+- In `.env`, set `DEMO_MODE=true`.
+- In the Hibira app, add `http://localhost:8000` to Allowed origins.
 
-| 時間 | 畫面 | 動作 | 旁白 |
+**Sign in:** in each window, open `/login` and click a one-click login button:
+- Customer: 「林小美（客戶）」
+- Manager A: 「王經理」
+- Manager B: 「陳主任」
+
+Leave both manager windows on the AI approvals page (「AI 審批」).
+
+| Time | Window | Action | Narration |
 |---|---|---|---|
-| 0:00–0:10 | 三個視窗 | 指出客戶頁右上角「即時連線」、主管頁的「另有 1 位審查者在線上」 | 「左邊是客戶，右邊是兩位主管，三個瀏覽器都連上 Hibira。主管彼此看得到對方在線上。」 |
-| 0:10–0:25 | 客戶 | 輸入「我想退掉這筆訂單」，按 Enter | 「客戶要求退款。客服 AI 查了訂單，提出退 USD 49.00，但退款一定要主管同意，所以 agent 暫停了。」 |
-| 0:25–0:35 | 兩位主管 | 不重新整理，兩邊同時出現「Support Agent 待審批」 | 「兩位主管的收件匣同時收到，不用重新整理。上方是後端的訂單資料：已付、已退、可退。」 |
-| 0:35–0:45 | 主管 B、主管 A | 兩人都點開這筆請求 | 「兩個人打開同一筆時，彼此會看到『正在一起審查』，不會兩個人各做一半。」 |
-| 0:45–1:00 | 主管 A | 按「修改」，把 `"amount": 4900` 改成 `2900`，按「用這些參數執行」 | 「主管 A 決定只退 29 元。後端會檢查金額、幣別、訂單與剩餘可退金額，不合法的修改不會被接受。」 |
-| 1:00–1:15 | 客戶 | 回覆以串流方式出現；狀態變成「已完成」，已退 USD 29.00、可退 USD 20.00 | 「決定送出後，queue worker 接續同一段對話，執行模擬退款，客戶這邊即時收到結果。」 |
-| 1:15–1:25 | 主管 B | 請求自動變成「完成 · 王經理」，已沒有按鈕 | 「主管 B 也同步看到結果，而且已送出的決定不能被第二個人覆寫。」 |
-| 1:25–1:30 | 客戶 | 按瀏覽器重新整理 | 「重新整理後狀態都還在：訂單、退款與對話都存在我們自己的資料庫，Hibira 只負責即時通知。」 |
+| 0:00–0:10 | All three | Point at the live-connection badge on the customer page and "1 other reviewer online" on the manager pages | "The customer is on the left and two managers are on the right. All three browsers are connected to Hibira, and the managers can see each other online." |
+| 0:10–0:25 | Customer | Type 「我想退掉這筆訂單」 ("I'd like to return this order") and press Enter | "The customer asks for a refund. The support agent looks up the order and proposes refunding USD 49.00. Every refund needs a manager, so the agent pauses." |
+| 0:25–0:35 | Both managers | Without a reload, the pending request appears in both inboxes | "Both inboxes get it at the same moment, with no reload. Above it is the order data from the backend: paid, refunded, refundable." |
+| 0:35–0:45 | Manager B, then Manager A | Both open the request | "When both open the same request, each sees the other is reviewing it too, so nobody does half the work." |
+| 0:45–1:00 | Manager A | Click Edit, change `"amount": 4900` to `2900`, run it with these arguments | "Manager A decides to refund only 29 dollars. The backend checks the amount, currency, order and what's left to refund. An invalid edit isn't accepted." |
+| 1:00–1:15 | Customer | The reply streams in. The status turns completed; refunded USD 29.00, refundable USD 20.00 | "Once the decision is sent, the queue worker continues the same conversation, runs the simulated refund, and the customer gets the result live." |
+| 1:15–1:25 | Manager B | The request turns done, decided by 王經理, with no buttons left | "Manager B sees the result too, and a decision that has been sent can't be overwritten by a second person." |
+| 1:25–1:30 | Customer | Reload the page | "After a reload everything is still there. The order, the refund and the conversation live in our own database; Hibira only delivers the live updates." |
 
-**可選的加碼**（多 30 秒）：主管 B 打開「退款操作」，指出「Agent 申請 USD 49.00、實際 USD 29.00、王經理 決定、退款編號」；
-或在 `.env` 設 `DEMO_MOCK_AI_FAILURE_AFTER_REFUND=true` 重走一次，示範失敗後在收件匣「重試」不會重複退款。
+**Optional extras** (30 more seconds), pick one:
+- **Refund operations:** Manager B opens the refund operations page and points out four things: the agent asked for USD 49.00, the actual refund was USD 29.00, 王經理 decided, and the refund reference.
+- **Retry after a failure:** set `DEMO_MOCK_AI_FAILURE_AFTER_REFUND=true` in `.env` and run the flow again. After the failure, Retry in the inbox doesn't refund twice.
 
-**重現步驟**：每次展示前執行 `php artisan demo:reset`。本次交付提供腳本與重現步驟，**沒有錄製影片**。
-`tests/e2e/approval-flow.mjs` 自動走一遍同樣的流程，設定 `E2E_SCREENSHOTS=<資料夾>` 會留下各步驟截圖。
+**Reproducing:**
+- Run `php artisan demo:reset` before every demo.
+- This release ships the script and the steps; **no video was recorded.**
+- `tests/e2e/approval-flow.mjs` runs the same flow automatically. Set `E2E_SCREENSHOTS=<folder>` to keep a screenshot of each step.
+
+## 中文摘要
+
+**畫面配置**
+- 左邊是客戶視窗，右邊上下兩個主管視窗。
+
+**事前準備**
+- 先執行 `demo:reset`，再啟動 Web 服務與 `queue:work`。
+- 在三個視窗分別用一鍵登入：客戶、王經理、陳主任。
+
+**90 秒流程**
+1. 客戶說「我想退掉這筆訂單」。
+2. 兩位主管同時收到請求，也看到彼此在線。
+3. 王經理把金額改成 USD 29.00 後核准。
+4. 客戶頁即時顯示已退款，陳主任的畫面也同步更新。
+5. 重新整理頁面，狀態仍在。
+
+**其他**
+- 這一版沒有錄影片。E2E 測試會自動跑同樣的流程，也可以順便截圖。

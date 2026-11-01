@@ -1,41 +1,58 @@
-# 試點檢查清單
+# Pilot checklist
 
-這份清單給想用這個範例找早期使用者的團隊。裡面的數字是**實驗門檻**，用來決定要不要繼續投入，不是已經達成的成果。
+For teams who want to use this example to find early users. The numbers below are **experiment thresholds** for deciding whether to keep investing. They are not results that have been reached.
 
-## 實驗門檻（尚未驗證）
+> 中文摘要在最後：[中文摘要](#中文摘要)。
 
-| 指標 | 門檻 | 定義 |
+## Experiment thresholds (not yet verified)
+
+| Metric | Threshold | Definition |
 |---|---|---|
-| 試用開發者 | 10 位 | 在自己的機器或伺服器上跑完一次退款審批流程（看到客戶頁顯示「已退款」） |
-| 接進真實專案 | 3 個 | 把 `ApprovalDesk`、審批工具或 Hibira 頻道接進非範例的 Laravel 專案 |
-| 兩週後仍在用 | 2 個 | 接入後第 14 天，該專案過去 7 天內仍有審批事件 |
-| 付費試點 | 1 個 | 簽下付費試點或升級到付費方案，且原因和審批功能有關 |
+| Developers who tried it | 10 | Ran the refund approval flow once on their own machine or server and saw the customer page show the refund |
+| Wired into real projects | 3 | Added `ApprovalDesk`, an approval tool or the Hibira channels to a Laravel project that isn't this demo |
+| Still in use after two weeks | 2 | On day 14 after integration, the project had approval events in the previous 7 days |
+| Paid pilot | 1 | A signed paid pilot or an upgrade to a paid plan, with approvals as the reason |
 
-觀察期建議 6 週。期滿未達門檻時，先看是哪一步流失，再決定要改範例、改套件，還是停止。
+We suggest a 6-week observation window. If the thresholds aren't met by the end, first find the step where people dropped off. Then decide whether to change the example, change the packages, or stop.
 
-## 上手檢查（每位試用者）
+## Onboarding checklist (each pilot user)
 
-- [ ] 取得免費 Hibira app，填好 `.env` 的 `HIBIRA_*`，並把網址加進 Allowed origins
-- [ ] `docker compose up` 或本機 `php artisan serve` + `php artisan queue:work` 啟動成功
-- [ ] `php artisan demo:reset` 建立示範資料
-- [ ] 客戶送出「我想退掉這筆訂單」，兩位主管的收件匣同時出現請求並看到彼此在線
-- [ ] 一位主管改成 USD 29.00 核准，另一位的畫面同步更新且無法再決定
-- [ ] 客戶頁即時顯示結果，重新整理後狀態一致
-- [ ] 停掉 worker 再啟動，流程不會遺失
-- [ ] （選做）換成真實模型 `AI_PROVIDER=...` 跑 `php artisan demo:smoke`
-- [ ] 記錄從 clone 到第一次成功退款花了多少分鐘（目標 30 分鐘內，尚未量測）
+- [ ] Get a free Hibira app, fill in `HIBIRA_*` in `.env`, and add the address to Allowed origins
+- [ ] Start it with `docker compose up` (FrankenPHP image), or locally with `php artisan serve` + `php artisan queue:work`
+- [ ] Create the demo data with `php artisan demo:reset`
+- [ ] The customer sends 「我想退掉這筆訂單」, and the request appears in both manager inboxes at once, with each manager seeing the other online
+- [ ] One manager approves at USD 29.00, and the other's view updates and can no longer decide
+- [ ] The customer page shows the result live and the same state after a reload
+- [ ] Stop the worker and start it again, and nothing is lost
+- [ ] (Optional) Switch to a real model with `AI_PROVIDER=...` and run `php artisan demo:smoke`
+- [ ] Note how many minutes it took from clone to the first successful refund (target under 30 minutes; not yet measured)
 
-## 訪談問題
+## Interview questions
 
-1. 你們現在讓 AI 執行哪些需要人確認的動作？目前怎麼確認？
-2. 審批的人通常在哪裡工作（後台、Slack、手機）？
-3. 哪一步卡最久？哪一段說明不清楚？
-4. 金額修改、駁回原因、多人同時審批，哪些是你們真的需要的？
-5. 要放進正式環境，還缺什麼（稽核紀錄、角色權限、到期時間、推播）？
-6. 如果這是付費功能，你們會用什麼預算或流程來買？
+1. Which actions do you let AI take today that need a person to confirm? How do you confirm them now?
+2. Where do the approvers usually work (an admin panel, Slack, their phone)?
+3. Which step took longest? Which part of the instructions was unclear?
+4. Which do you really need: editing amounts, rejection reasons, several approvers at once?
+5. What's missing before you'd put it in production (audit log, roles, expiry, push)?
+6. If this were a paid feature, what budget or process would you buy it through?
 
-## 量測方式
+## How to measure
 
-- 試用與接入：請試用者回報，或在 Hibira 主控台看該 app 是否出現 `private-hibira-approvals.*` 頻道。
-- 仍在使用：同一 app 在第 8–14 天有審批頻道活動。
-- 不在範例裡加任何遙測；所有量測都要試用者同意。
+- **Tried and integrated:** ask the pilot user to report it, or check the Hibira console for `private-hibira-approvals.*` channels on their app.
+- **Still in use:** the same app has approval channel activity on days 8 to 14.
+- **Consent:** the example contains no telemetry, and every measurement needs the pilot user's consent.
+
+## 中文摘要
+
+**實驗門檻**
+- 門檻是：10 位開發者試用、3 個專案接入、2 個兩週後仍在使用、1 個付費試點。
+- 這些只是用來決定要不要繼續投入的實驗門檻，不是已經達成的成果。
+- 建議觀察 6 週。
+
+**清單內容**
+- 上手檢查：從取得 app 到跑完整個流程，並記錄花了多少分鐘（目標 30 分鐘內，尚未量測）。
+- 訪談問題。
+- 量測方式。
+
+**隱私**
+- 範例不含任何遙測，所有量測都要試用者同意。
