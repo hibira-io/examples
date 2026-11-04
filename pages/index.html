@@ -15,15 +15,19 @@
       * { box-sizing: border-box; }
       body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
       a { color: var(--accent); }
-      main { max-width: 860px; margin: 0 auto; padding: 32px 16px 48px; }
+      main { max-width: 880px; margin: 0 auto; padding: 32px 16px 48px; }
       nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
       nav a { text-decoration: none; font-weight: 600; }
       select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
       h1 { font-size: 1.8em; margin: 32px 0 8px; }
       .muted { color: var(--muted); }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 24px; }
+      .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
       .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
       .card h2 { margin: 0; font-size: 1.15em; }
+      .preview { position: relative; display: block; margin: -20px -20px 6px; aspect-ratio: 966 / 700; overflow: hidden; border-radius: 11px 11px 0 0; border-bottom: 1px solid var(--border); background: var(--border); }
+      .preview video { display: block; width: 100%; height: 100%; object-fit: cover; }
+      .preview .tag { position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: rgba(20, 22, 31, 0.72); color: #fff; font-size: 0.78em; font-weight: 600; }
+      .preview .tag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #3dd68c; }
       .card p { margin: 0; flex: 1; }
       .links { display: flex; gap: 16px; flex-wrap: wrap; }
       .button { background: var(--accent); color: #fff; border-radius: 8px; padding: 6px 14px; text-decoration: none; font-weight: 600; }
@@ -40,6 +44,10 @@
       <p class="muted" data-t="intro"></p>
       <div class="grid">
         <section class="card">
+          <a class="preview" href="nextjs-lobby/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/lobby.webp" data-src="gallery/lobby.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
           <h2 data-t="lobbyTitle"></h2>
           <p class="muted" data-t="lobbyText"></p>
           <div class="links">
@@ -48,6 +56,10 @@
           </div>
         </section>
         <section class="card">
+          <a class="preview" href="nextjs-dashboard/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/dashboard.webp" data-src="gallery/dashboard.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
           <h2 data-t="dashboardTitle"></h2>
           <p class="muted" data-t="dashboardText"></p>
           <div class="links">
@@ -56,6 +68,10 @@
           </div>
         </section>
         <section class="card">
+          <a class="preview" href="nextjs-spaces/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/spaces.webp" data-src="gallery/spaces.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
           <h2 data-t="spacesTitle"></h2>
           <p class="muted" data-t="spacesText"></p>
           <div class="links">
@@ -64,6 +80,10 @@
           </div>
         </section>
         <section class="card">
+          <a class="preview" href="nextjs-games/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/four.webp" data-src="gallery/four.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
           <h2 data-t="gamesTitle"></h2>
           <p class="muted" data-t="gamesText"></p>
           <div class="links">
@@ -72,6 +92,10 @@
           </div>
         </section>
         <section class="card">
+          <a class="preview" href="phaser-lobby/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/phaser.webp" data-src="gallery/phaser.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
           <h2 data-t="phaserTitle"></h2>
           <p class="muted" data-t="phaserText"></p>
           <div class="links">
@@ -98,6 +122,7 @@
           gamesText: 'A shared pixel canvas, draw & guess and Connect Four, played over client events between browsers.',
           phaserTitle: 'Phaser game lobby',
           phaserText: 'The game lobby made with Phaser. It shares rooms with the browser version, so Phaser and web players can play together.',
+          live: 'Two browsers, recorded live',
           open: 'Open the demo',
           source: 'Source code',
           footer: 'Hibira is a hosted realtime WebSocket service that speaks the Pusher Channels protocol. The free plan needs no card.',
@@ -116,6 +141,7 @@
           gamesText: '共用像素畫布、你畫我猜和四子棋，全靠瀏覽器之間的 client event 對戰。',
           phaserTitle: 'Phaser 遊戲大廳',
           phaserText: '用 Phaser 做的遊戲大廳，和網頁版共用房間，Phaser 玩家和網頁玩家可以一起玩。',
+          live: '兩個瀏覽器，實際錄製',
           open: '打開 demo',
           source: '原始碼',
           footer: 'Hibira 是相容 Pusher Channels 協定的即時 WebSocket 託管服務，免費方案不需要信用卡。',
@@ -134,6 +160,7 @@
           gamesText: '共享像素画布、你画我猜和四子棋，全靠浏览器之间的 client event 对战。',
           phaserTitle: 'Phaser 游戏大厅',
           phaserText: '用 Phaser 做的游戏大厅，和网页版共用房间，Phaser 玩家和网页玩家可以一起玩。',
+          live: '两个浏览器，实际录制',
           open: '打开 demo',
           source: '源代码',
           footer: 'Hibira 是兼容 Pusher Channels 协议的实时 WebSocket 托管服务，免费方案无需信用卡。',
@@ -152,6 +179,7 @@
           gamesText: 'みんなのピクセルキャンバス、お絵かき当てっこ、四目並べ。ブラウザ同士の client event で遊びます。',
           phaserTitle: 'Phaser ゲームロビー',
           phaserText: 'Phaser で作ったゲームロビー。ブラウザ版とルームを共有するので、Phaser とウェブのプレイヤーが一緒に遊べます。',
+          live: '2 つのブラウザで実際に録画',
           open: 'デモを開く',
           source: 'ソースコード',
           footer: 'Hibira は Pusher Channels プロトコル互換のリアルタイム WebSocket ホスティングサービスです。無料プランはカード不要です。',
@@ -170,6 +198,7 @@
           gamesText: '함께 쓰는 픽셀 캔버스, 그림 맞히기, 사목 게임. 브라우저 사이의 client event로 플레이합니다.',
           phaserTitle: 'Phaser 게임 로비',
           phaserText: 'Phaser로 만든 게임 로비. 웹 버전과 방을 공유해서 Phaser 플레이어와 웹 플레이어가 함께 플레이할 수 있습니다.',
+          live: '두 브라우저에서 실제로 녹화',
           open: '데모 열기',
           source: '소스 코드',
           footer: 'Hibira는 Pusher Channels 프로토콜과 호환되는 실시간 WebSocket 호스팅 서비스입니다. 무료 플랜은 카드가 필요 없습니다.',
@@ -188,6 +217,7 @@
           gamesText: 'ผืนผ้าใบพิกเซลร่วมกัน วาดแล้วทาย และเรียงสี่ เล่นผ่าน client event ระหว่างเบราว์เซอร์',
           phaserTitle: 'ล็อบบี้เกม Phaser',
           phaserText: 'ล็อบบี้เกมที่ทำด้วย Phaser ใช้ห้องร่วมกับเวอร์ชันเว็บ ผู้เล่น Phaser และผู้เล่นเว็บจึงเล่นด้วยกันได้',
+          live: 'บันทึกจริงจากสองเบราว์เซอร์',
           open: 'เปิดเดโม',
           source: 'ซอร์สโค้ด',
           footer: 'Hibira คือบริการ WebSocket เรียลไทม์แบบโฮสต์ที่รองรับโปรโตคอล Pusher Channels แพ็กเกจฟรีไม่ต้องใช้บัตร',
@@ -206,6 +236,7 @@
           gamesText: 'Bảng vẽ pixel chung, vẽ và đoán, và bốn quân thẳng hàng, chơi qua client event giữa các trình duyệt.',
           phaserTitle: 'Sảnh trò chơi Phaser',
           phaserText: 'Sảnh trò chơi làm bằng Phaser, dùng chung phòng với bản web nên người chơi Phaser và người chơi web có thể chơi cùng nhau.',
+          live: 'Quay thật trên hai trình duyệt',
           open: 'Mở demo',
           source: 'Mã nguồn',
           footer: 'Hibira là dịch vụ WebSocket thời gian thực được lưu trữ, tương thích giao thức Pusher Channels. Gói miễn phí không cần thẻ.',
@@ -256,6 +287,33 @@
         apply(select.value);
       });
       apply(detect());
+
+      // The previews are short muted clips (pages/gallery, recorded with
+      // scripts/gallery): each loads when its card scrolls into view and
+      // pauses off screen. With reduced motion only the poster shows.
+      const still = matchMedia('(prefers-reduced-motion: reduce)');
+      const videos = document.querySelectorAll('.preview video');
+      const seen = new IntersectionObserver(
+        (entries) => {
+          for (const { target: v, isIntersecting } of entries) {
+            if (isIntersecting && !still.matches) {
+              if (!v.src) v.src = v.dataset.src;
+              v.play().catch(() => {});
+            } else {
+              v.pause();
+            }
+          }
+        },
+        { threshold: 0.3 },
+      );
+      for (const v of videos) seen.observe(v);
+      still.addEventListener('change', () => {
+        for (const v of videos) {
+          seen.unobserve(v);
+          if (still.matches) v.pause();
+          seen.observe(v);
+        }
+      });
     </script>
   </body>
 </html>
