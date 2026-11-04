@@ -52,6 +52,15 @@ function loadUser(): User {
 // app's own client events next to the space's.
 const FIELD_EVENT = 'client-plan-field';
 const STATE_EVENT = 'client-plan-state';
+const FIELD_SEND_MS = 200;
+
+// User-perceived characters, so Thai vowel marks and emoji are typed whole.
+function graphemes(text: string): string[] {
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    return Array.from(new Intl.Segmenter().segment(text), (s) => s.segment);
+  }
+  return Array.from(text);
+}
 
 export default function Planner({ appKey, host, port, tls }: Props) {
   const t = useT();
@@ -68,7 +77,8 @@ export default function Planner({ appKey, host, port, tls }: Props) {
   const spaceRef = useRef<Space<Info, Profile, string> | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const valuesRef = useRef(values);
-  const sendTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const sendTimers = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
+  const pending = useRef<Record<string, string>>({});
   valuesRef.current = values;
 
   useEffect(() => {
@@ -127,14 +137,33 @@ export default function Planner({ appKey, host, port, tls }: Props) {
     );
     space.on('error', (err) => console.warn(err));
 
-    channel.bind(FIELD_EVENT, (d: { field: string; value: string }) =>
-      setValues((v) => ({ ...v, [d.field]: d.value })),
-    );
+    // Text that grew since the last event is typed out one character at a
+    // time over the next FIELD_SEND_MS, so it reads like someone typing
+    // rather than arriving in chunks; anything else is shown at once.
+    const typing: Record<string, ReturnType<typeof setTimeout>[]> = {};
+    channel.bind(FIELD_EVENT, (d: { field: string; value: string }) => {
+      typing[d.field]?.forEach(clearTimeout);
+      const shown = valuesRef.current[d.field] ?? '';
+      const added = d.value.startsWith(shown) ? graphemes(d.value.slice(shown.length)) : [];
+      if (added.length < 2) {
+        setValues((v) => ({ ...v, [d.field]: d.value }));
+        return;
+      }
+      const step = FIELD_SEND_MS / added.length;
+      typing[d.field] = added.map((_, i) =>
+        setTimeout(() => {
+          const value = shown + added.slice(0, i + 1).join('');
+          valuesRef.current = { ...valuesRef.current, [d.field]: value };
+          setValues((v) => ({ ...v, [d.field]: value }));
+        }, i * step),
+      );
+    });
     channel.bind(STATE_EVENT, (d: { values: Record<string, string> }) =>
       setValues((v) => ({ ...d.values, ...v })),
     );
 
     return () => {
+      Object.values(typing).forEach((ts) => ts.forEach(clearTimeout));
       space.leave();
       pusher.disconnect();
       spaceRef.current = null;
@@ -182,8 +211,23 @@ export default function Planner({ appKey, host, port, tls }: Props) {
 
   function onChange(field: string, value: string) {
     setValues((v) => ({ ...v, [field]: value }));
-    clearTimeout(sendTimers.current[field]);
-    sendTimers.current[field] = setTimeout(() => spaceRef.current?.channel.trigger(FIELD_EVENT, { field, value }), 300);
+    // Throttled, not debounced: the others see the text grow while you type
+    // (one event every FIELD_SEND_MS at most, the latest value wins). With
+    // the space's cursor batches that stays under the 10 client events per
+    // second the server allows.
+    pending.current[field] = value;
+    if (sendTimers.current[field]) return;
+    const send = () => {
+      const v = pending.current[field];
+      if (v === undefined) {
+        sendTimers.current[field] = undefined;
+        return;
+      }
+      delete pending.current[field];
+      spaceRef.current?.channel.trigger(FIELD_EVENT, { field, value: v });
+      sendTimers.current[field] = setTimeout(send, FIELD_SEND_MS);
+    };
+    send();
   }
 
   const section = SECTIONS.find((s) => s.id === tab) ?? SECTIONS[0];
