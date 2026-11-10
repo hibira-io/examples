@@ -22,6 +22,8 @@ concurrency:
 
 env:
   NEXT_PUBLIC_DEMO_API: ${{ vars.DEMO_API_URL || 'https://demo-api.hibira.io' }}
+  # nextjs-handoff: the demo account's plan allows 10 KB client events.
+  NEXT_PUBLIC_RELAY_CHUNK_BYTES: 7000
 
 jobs:
   build:
@@ -36,7 +38,7 @@ jobs:
           set -euo pipefail
           mkdir -p site
           cp -r pages/. site/
-          for app in nextjs-lobby nextjs-dashboard nextjs-spaces nextjs-games; do
+          for app in nextjs-lobby nextjs-dashboard nextjs-spaces nextjs-games nextjs-handoff; do
             (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npx next build)
             cp -r "$app/out" "site/$app"
           done
