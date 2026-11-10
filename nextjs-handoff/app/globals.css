@@ -303,6 +303,12 @@ button.link {
   position: sticky;
   top: 16px;
 }
+/* On a phone-width screen the form is below the card, so it scrolls away. */
+@media (max-width: 760px) {
+  .pair {
+    position: static;
+  }
+}
 .pair h2 {
   color: var(--text);
   font-size: 1rem;
