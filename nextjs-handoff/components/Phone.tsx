@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Handoff, deviceName, importKey, validCode, type Peer, type Transport } from '@/lib/handoff';
+import { createHandoff, deviceName, readPairing, type Handoff, type Peer, type Transport } from '@hibira-io/handoff';
 import { connect, RELAY_CHUNK, type Config } from '@/lib/client';
 import { fromFile, fromVideo, type Photo } from '@/lib/photo';
 import { useT } from './I18n';
@@ -28,42 +28,30 @@ export default function Phone(config: Config) {
   const seen = useRef(false);
 
   useEffect(() => {
-    const code = new URLSearchParams(location.search).get('s') ?? '';
-    const key = new URLSearchParams(location.hash.slice(1)).get('k') ?? '';
-    if (!validCode(code) || !key) {
+    const pairing = readPairing();
+    if (!pairing) {
       setStatus('bad');
       return;
     }
-    let pusher: ReturnType<typeof connect> | undefined;
-    let stopped = false;
-    importKey(key).then(
-      (cryptoKey) => {
-        if (stopped) return;
-        const me = crypto.randomUUID();
-        pusher = connect(config, me, 'phone', deviceName());
-        handoff.current = new Handoff({
-          pusher,
-          code,
-          key: cryptoKey,
-          me,
-          role: 'phone',
-          relayChunk: RELAY_CHUNK,
-          onPeer: (p) => {
-            setPeer(p);
-            if (p) seen.current = true;
-            setStatus(p ? 'ready' : seen.current ? 'gone' : 'connecting');
-          },
-          onTransport: setTransport,
-          onRefused: () => setStatus('inuse'),
-        });
+    const me = crypto.randomUUID();
+    const pusher = connect(config, me, 'phone', deviceName());
+    handoff.current = createHandoff({
+      pusher,
+      ...pairing,
+      role: 'phone',
+      relayChunk: RELAY_CHUNK,
+      onPeer: (p) => {
+        setPeer(p);
+        if (p) seen.current = true;
+        setStatus(p ? 'ready' : seen.current ? 'gone' : 'connecting');
       },
-      () => setStatus('bad'),
-    );
+      onTransport: setTransport,
+      onRefused: () => setStatus('inuse'),
+    });
     return () => {
-      stopped = true;
       handoff.current?.close();
       handoff.current = null;
-      pusher?.disconnect();
+      pusher.disconnect();
     };
   }, [config]);
 
@@ -106,7 +94,7 @@ export default function Phone(config: Config) {
     if (!h) return;
     setSending((n) => n + 1);
     try {
-      await h.send(photo.blob, `receipt-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.jpg`, photo.thumb);
+      await h.send(photo.blob, { name: `receipt-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.jpg`, preview: photo.thumb });
       setSent((n) => n + 1);
     } finally {
       setSending((n) => n - 1);
@@ -139,7 +127,7 @@ export default function Phone(config: Config) {
     <main className="phone">
       <div className="status">
         <span className={`dot ${ready ? 'on' : ''}`} />
-        <span>{ready && peer ? t.toDevice(peer.device) : status === 'gone' ? t.deskGone : t.waitingDesk}</span>
+        <span>{ready && peer ? t.toDevice(peer.device ?? '') : status === 'gone' ? t.deskGone : t.waitingDesk}</span>
         {ready && (
           <span className={`badge ${transport}`} title={transport === 'direct' ? t.directTip : t.relayTip}>
             {transport === 'direct' ? t.direct : t.relay}

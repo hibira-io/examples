@@ -15,7 +15,7 @@ encrypted: Hibira only ever relays ciphertext.
 
 - **Pairing by QR code.** The desktop page makes a random 128-bit code and a
   256-bit AES-GCM key. The QR code holds
-  `/phone/?s=<code>#k=<key>`: the key sits in the `#fragment`, which
+  `/phone/?hh=<code>#hk=<key>`: the key sits in the `#fragment`, which
   browsers never send to a server.
 - **A two-seat presence channel.** Both pages join
   `presence-handoff-<code>`. The auth route (`app/api/hibira/auth/route.ts`)
@@ -32,8 +32,11 @@ encrypted: Hibira only ever relays ciphertext.
   the computer shows a blurred photo flying in at once and sharpens it
   when the last chunk arrives.
 
-All of it is in `lib/handoff.ts`, which has no React in it; the pages are
-`components/Desk.tsx` and `components/Phone.tsx`.
+All of it comes from the [`@hibira-io/handoff`](https://www.npmjs.com/package/@hibira-io/handoff)
+package (`npm install @hibira-io/handoff`): `createHandoff` in the pages
+`components/Desk.tsx` and `components/Phone.tsx`, and `authorizeHandoff`
+in the auth route. The package also has a React hook and a one-line
+`<hibira-handoff>` element if you'd rather not wire it up yourself.
 
 Measured against a local Hibira server with an 860 KB photo: direct in about
 0.2 s; relayed in about 1 s with 7 KB chunks (10 KB event limit, Hobby and
@@ -74,11 +77,11 @@ photo is about 22 messages with 7 KB chunks. Nothing is stored.
   their own phone can join.
 - Save the photo where your form saves its files once it has arrived on
   the computer; the phone never needs your upload endpoint.
-- Add a TURN server to `ICE_SERVERS` in `lib/handoff.ts` if most of your
-  users are on networks that block peer-to-peer.
+- Pass a TURN server in the `iceServers` option of `createHandoff` if most
+  of your users are on networks that block peer-to-peer.
 - The same pairing works for anything small: a signature drawn on the
   phone, a scanned ID, a document from the phone's files.
 
 ## 中文摘要
 
-電腦上的報銷表單需要收據照片：用手機掃 QR 碼、拍照，照片約一秒內出現在電腦表單裡。不用 App、不用登入、沒有上傳伺服器；金鑰放在 QR 碼網址的 `#` 後面，不會傳到伺服器，照片全程端對端加密。優先用 WebRTC 直連（Hibira 只做信令），連不上時改用 Hibira 頻道的 client event 分段傳送。核心邏輯在 `lib/handoff.ts`。
+電腦上的報銷表單需要收據照片：用手機掃 QR 碼、拍照，照片約一秒內出現在電腦表單裡。不用 App、不用登入、沒有上傳伺服器；金鑰放在 QR 碼網址的 `#` 後面，不會傳到伺服器，照片全程端對端加密。優先用 WebRTC 直連（Hibira 只做信令），連不上時改用 Hibira 頻道的 client event 分段傳送。核心邏輯來自 npm 套件 `@hibira-io/handoff`（另有 React hook 與一行即用的 `<hibira-handoff>` 元素）。

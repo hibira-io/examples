@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Handoff, deviceName, importKey, newSession, type Peer, type Transport } from '@/lib/handoff';
+import { createHandoff, deviceName, newPairing, pairingLink, type Handoff, type Peer, type Transport } from '@hibira-io/handoff';
 import { connect, RELAY_CHUNK, type Config } from '@/lib/client';
 import { BASE_PATH } from '@/lib/demo';
 import { useT } from './I18n';
@@ -35,26 +35,24 @@ export default function Desk(config: Config) {
     setPeer(null);
     setRefused(false);
     (async () => {
-      const { code, key } = await newSession();
-      const link = `${location.origin}${BASE_PATH}/phone/?s=${code}${langParam()}#k=${key}`;
+      const pairing = newPairing();
+      const link = pairingLink(`${location.origin}${BASE_PATH}/phone/${langParam()}`, pairing);
       const qr = await QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
       if (stopped) return;
       setSession({ link, qr });
       const me = crypto.randomUUID();
       pusher = connect(config, me, 'desk', deviceName());
-      handoff = new Handoff({
+      handoff = createHandoff({
         pusher,
-        code,
-        key: await importKey(key),
-        me,
+        ...pairing,
         role: 'desk',
         relayChunk: RELAY_CHUNK,
         onPeer: setPeer,
         onTransport: setTransport,
         onRefused: () => setRefused(true),
-        onIncoming: (f) => setItems((list) => [{ id: f.id, thumb: f.thumb, progress: 0 }, ...list]),
+        onIncoming: (f) => setItems((list) => [{ id: f.id, thumb: f.preview, progress: 0 }, ...list]),
         onProgress: (id, ratio) => setItems((list) => list.map((i) => (i.id === id ? { ...i, progress: ratio } : i))),
-        onFile: (id, blob) => {
+        onFile: ({ id, blob }) => {
           const url = URL.createObjectURL(blob);
           urls.current.push(url);
           setItems((list) => list.map((i) => (i.id === id ? { ...i, url, progress: 1 } : i)));
@@ -154,7 +152,7 @@ export default function Desk(config: Config) {
                   <path d="M10.5 18.5h3" />
                 </svg>
               </div>
-              <p className="device">{t.connected(peer.device)}</p>
+              <p className="device">{t.connected(peer.device ?? '')}</p>
               <p className="muted">{t.shootHint}</p>
               <p className="badges">
                 <span className={`badge ${transport}`} title={transport === 'direct' ? t.directTip : t.relayTip}>
@@ -192,5 +190,5 @@ export default function Desk(config: Config) {
 // The phone page opens in the same language as this one.
 function langParam(): string {
   const lang = document.documentElement.lang;
-  return lang ? `&lang=${encodeURIComponent(lang)}` : '';
+  return lang ? `?lang=${encodeURIComponent(lang)}` : '';
 }

@@ -1,6 +1,6 @@
 import Pusher from 'pusher-js';
 import { endpoint } from './demo';
-import type { Role } from './handoff';
+import type { Role } from '@hibira-io/handoff';
 
 export interface Config {
   appKey: string;
