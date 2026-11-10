@@ -1,0 +1,10 @@
+# Netlify settings for the "Deploy to Netlify" button. Netlify builds the
+# Next.js app with its own adapter; the API routes run as functions.
+[build]
+  command = "npm run build"
+
+# Asked for when the button creates the site.
+[template.environment]
+  HIBIRA_APP_ID = "App ID from your app page at hibira.io/portal (the free plan is enough)"
+  HIBIRA_APP_SECRET = "App secret from the same page"
+  NEXT_PUBLIC_HIBIRA_APP_KEY = "App key from the same page"

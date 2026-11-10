@@ -44,6 +44,18 @@
       <p class="muted" data-t="intro"></p>
       <div class="grid">
         <section class="card">
+          <a class="preview" href="nextjs-handoff/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/handoff.webp" data-src="gallery/handoff.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
+          <h2 data-t="handoffTitle"></h2>
+          <p class="muted" data-t="handoffText"></p>
+          <div class="links">
+            <a class="button" href="nextjs-handoff/" data-t="open" data-demo></a>
+            <a href="https://github.com/hibira-io/examples/tree/main/nextjs-handoff" data-t="source"></a>
+          </div>
+        </section>
+        <section class="card">
           <a class="preview" href="nextjs-lobby/" data-demo tabindex="-1" aria-hidden="true">
             <video muted loop playsinline preload="none" poster="gallery/lobby.webp" data-src="gallery/lobby.mp4"></video>
             <span class="tag" data-t="live"></span>
@@ -118,6 +130,8 @@
           dashboardText: 'Server events update every open dashboard at once, with a viewer count from a large presence channel.',
           spacesTitle: 'Shared trip planner',
           spacesText: 'Live cursors, avatars, field locks and follow mode in one form, with @hibira-io/spaces.',
+          handoffTitle: 'Phone to desktop',
+          handoffText: 'Scan a QR code, take a photo on your phone, and it lands in the form on your computer in a second. End-to-end encrypted, over WebRTC or a Hibira channel.',
           gamesTitle: 'Party games',
           gamesText: 'A shared pixel canvas, draw & guess and Connect Four, played over client events between browsers.',
           phaserTitle: 'Phaser game lobby',
@@ -137,6 +151,8 @@
           dashboardText: '伺服器事件同時更新每個打開的儀表板，觀看人數來自大型 presence 頻道。',
           spacesTitle: '共同旅遊規劃',
           spacesText: '即時游標、頭像、欄位鎖定和跟隨模式，全在一張表單裡，使用 @hibira-io/spaces。',
+          handoffTitle: '手機拍照傳電腦',
+          handoffText: '掃描 QR 碼，用手機拍照，一秒就出現在電腦的表單裡。端對端加密，走 WebRTC 直連或 Hibira 頻道。',
           gamesTitle: '派對小遊戲',
           gamesText: '共用像素畫布、你畫我猜和四子棋，全靠瀏覽器之間的 client event 對戰。',
           phaserTitle: 'Phaser 遊戲大廳',
@@ -156,6 +172,8 @@
           dashboardText: '服务器事件同时更新每个打开的仪表盘，观看人数来自大型 presence 频道。',
           spacesTitle: '共同旅行规划',
           spacesText: '实时光标、头像、字段锁定和跟随模式，全在一张表单里，使用 @hibira-io/spaces。',
+          handoffTitle: '手机拍照传电脑',
+          handoffText: '扫描二维码，用手机拍照，一秒就出现在电脑的表单里。端到端加密，走 WebRTC 直连或 Hibira 频道。',
           gamesTitle: '派对小游戏',
           gamesText: '共享像素画布、你画我猜和四子棋，全靠浏览器之间的 client event 对战。',
           phaserTitle: 'Phaser 游戏大厅',
@@ -175,6 +193,8 @@
           dashboardText: 'サーバーのイベントが開いているすべてのダッシュボードを同時に更新し、閲覧人数は大規模 presence チャンネルから取得します。',
           spacesTitle: 'みんなで旅行プランナー',
           spacesText: 'ライブカーソル、アバター、項目ロック、フォローモードを 1 つのフォームで。@hibira-io/spaces を使っています。',
+          handoffTitle: 'スマホからパソコンへ',
+          handoffText: 'QR コードをスキャンしてスマホで撮影すると、1 秒でパソコンのフォームに届きます。エンドツーエンド暗号化、WebRTC または Hibira のチャンネル経由。',
           gamesTitle: 'パーティーゲーム',
           gamesText: 'みんなのピクセルキャンバス、お絵かき当てっこ、四目並べ。ブラウザ同士の client event で遊びます。',
           phaserTitle: 'Phaser ゲームロビー',
@@ -194,6 +214,8 @@
           dashboardText: '서버 이벤트가 열려 있는 모든 대시보드를 한 번에 업데이트하고, 시청자 수는 대규모 presence 채널에서 가져옵니다.',
           spacesTitle: '함께 짜는 여행 계획',
           spacesText: '실시간 커서, 아바타, 항목 잠금, 따라가기 모드를 하나의 양식에서. @hibira-io/spaces를 사용합니다.',
+          handoffTitle: '휴대폰에서 컴퓨터로',
+          handoffText: 'QR 코드를 스캔하고 휴대폰으로 사진을 찍으면 1초 만에 컴퓨터의 양식에 도착합니다. 종단 간 암호화, WebRTC 또는 Hibira 채널 경유.',
           gamesTitle: '파티 게임',
           gamesText: '함께 쓰는 픽셀 캔버스, 그림 맞히기, 사목 게임. 브라우저 사이의 client event로 플레이합니다.',
           phaserTitle: 'Phaser 게임 로비',
@@ -213,6 +235,8 @@
           dashboardText: 'อีเวนต์จากเซิร์ฟเวอร์อัปเดตทุกแดชบอร์ดที่เปิดอยู่พร้อมกัน พร้อมจำนวนผู้ชมจาก large presence channel',
           spacesTitle: 'วางแผนเที่ยวด้วยกัน',
           spacesText: 'เคอร์เซอร์สด อวตาร การล็อกช่อง และโหมดติดตาม ในฟอร์มเดียว ด้วย @hibira-io/spaces',
+          handoffTitle: 'จากมือถือสู่คอมพิวเตอร์',
+          handoffText: 'สแกน QR โค้ด ถ่ายรูปด้วยมือถือ แล้วรูปจะไปอยู่ในฟอร์มบนคอมพิวเตอร์ในหนึ่งวินาที เข้ารหัสต้นทางถึงปลายทาง ผ่าน WebRTC หรือช่อง Hibira',
           gamesTitle: 'เกมปาร์ตี้',
           gamesText: 'ผืนผ้าใบพิกเซลร่วมกัน วาดแล้วทาย และเรียงสี่ เล่นผ่าน client event ระหว่างเบราว์เซอร์',
           phaserTitle: 'ล็อบบี้เกม Phaser',
@@ -232,6 +256,8 @@
           dashboardText: 'Sự kiện từ máy chủ cập nhật mọi bảng điều khiển đang mở cùng lúc, kèm số người xem từ large presence channel.',
           spacesTitle: 'Lên kế hoạch du lịch cùng nhau',
           spacesText: 'Con trỏ trực tiếp, ảnh đại diện, khóa ô và chế độ theo dõi trong một biểu mẫu, với @hibira-io/spaces.',
+          handoffTitle: 'Từ điện thoại sang máy tính',
+          handoffText: 'Quét mã QR, chụp ảnh bằng điện thoại, ảnh sẽ vào biểu mẫu trên máy tính trong một giây. Mã hóa đầu cuối, qua WebRTC hoặc kênh Hibira.',
           gamesTitle: 'Trò chơi nhóm',
           gamesText: 'Bảng vẽ pixel chung, vẽ và đoán, và bốn quân thẳng hàng, chơi qua client event giữa các trình duyệt.',
           phaserTitle: 'Sảnh trò chơi Phaser',
