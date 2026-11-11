@@ -201,3 +201,16 @@ jobs:
           php artisan queue:work --sleep=1 > worker.log 2>&1 &
           sleep 3
           BASE_URL=http://127.0.0.1:8000 node tests/e2e/approval-flow.mjs
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+      - run: terraform test
