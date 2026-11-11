@@ -39,6 +39,9 @@ backend instead of the app's own API routes, which need your secret.
    instance ID and secret key from Push notifications).
 3. Put them in the example's `.env` file as its README says.
 
+Or create the app with Terraform: [terraform](terraform) makes one app for
+every example and prints each example's `.env`.
+
 Hibira speaks the Pusher Channels and Beams protocols, so these examples use
 the standard open-source clients (`pusher-js`, `laravel-echo`,
 `pusher-php-server`) with the host set to `ws.hibira.io`, plus Hibira's own

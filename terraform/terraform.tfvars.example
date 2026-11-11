@@ -1,0 +1,10 @@
+# cp terraform.tfvars.example terraform.tfvars, then edit.
+# name            = "hibira-examples"
+# allowed_origins = ["https://my-demo.vercel.app"]
+
+# Push (react-native-push, laravel-ai-approvals):
+# push                     = true
+# apns_key_path            = "AuthKey_ABC123DEFG.p8"
+# apns_key_id              = "ABC123DEFG"
+# apns_team_id             = "TEAM123456"
+# fcm_service_account_path = "firebase-service-account.json"
