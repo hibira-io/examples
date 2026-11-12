@@ -150,6 +150,6 @@ const styles = StyleSheet.create({
   error: { color: '#d23c3c' },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 8, borderWidth: 1, borderColor: '#e3e6ef' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-  button: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#5b4bff' },
+  button: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#e5484d' },
   buttonText: { color: '#fff', fontWeight: '600' },
 });
