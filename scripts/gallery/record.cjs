@@ -7,7 +7,7 @@
 //   node scripts/gallery/record.cjs <site dir> <demo> <work dir> [lang]
 //   scripts/gallery/compose.sh <work dir> pages/gallery/<demo>.mp4
 //
-// <demo> is one of: lobby, dashboard, spaces, four, phaser, handoff. The real mouse
+// <demo> is one of: lobby, dashboard, spaces, four, phaser, handoff, auction. The real mouse
 // glides in 16 ms steps so the other side gets a dense cursor trail, and
 // compose.sh keeps the 25 fps of the recording.
 const { chromium } = require('playwright');
@@ -270,6 +270,40 @@ const SCENES = {
       await R.page.locator('.pad.go').waitFor({ state: 'detached', timeout: 8000 });
     }
     await sleep(1800);
+    return { L, R, t0 };
+  },
+  // The auction house: a bid, an outbid on the other side, then buy now.
+  async auction(b) {
+    const url = `${ORIGIN}nextjs-auction/?lang=${LANG}`;
+    const L = await side(b, 'left', { 'auction-player': JSON.stringify({ player: uuid(), name: 'Mei' }) });
+    const R = await side(b, 'right', { 'auction-player': JSON.stringify({ player: uuid(), name: 'Jun' }) });
+    await L.page.goto(url);
+    await R.page.goto(url);
+    await L.page.locator('.listings li .price-row').first().waitFor({ timeout: 20000 });
+    await R.page.locator('.listings li .price-row').first().waitFor({ timeout: 20000 });
+    // A listing both players can afford, with buy now and time left, in the
+    // same place on both sides.
+    const n = await L.page.locator('.listings li').evaluateAll((lis) =>
+      lis.findIndex((li) => {
+        const buy = li.querySelector('button.secondary');
+        const price = Number(buy?.textContent.replace(/[^0-9]/g, '') || Infinity);
+        return price <= 600 && !/^0:[0-5]/.test(li.innerText.match(/\d+:\d\d/)?.[0] ?? '');
+      }),
+    );
+    const item = (s) => s.page.locator('.listings li').nth(Math.max(0, n));
+    await item(L).scrollIntoViewIfNeeded();
+    await item(R).scrollIntoViewIfNeeded();
+    await sleep(800);
+    const t0 = Date.now();
+    await sleep(500);
+    await click(L, item(L).locator('button.primary'), 700);
+    await sleep(1400);
+    await click(R, item(R).locator('button.primary'), 700);
+    // The outbid side refreshes its wallet, which moves the cards a little.
+    await L.page.locator('.toasts > *').first().waitFor({ timeout: 8000 });
+    await sleep(1800);
+    await click(L, item(L).locator('button.secondary'), 600);
+    await sleep(2500);
     return { L, R, t0 };
   },
   // The handoff: a desktop expense form and a phone that scans its link and

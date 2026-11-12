@@ -117,6 +117,7 @@ export default function AuctionView({ appKey, host, port, tls }: Props) {
       if ((kind === 'bid' || kind === 'extended' || kind === 'sold') && wasMine) {
         myBids.current.delete(listing.id);
         toast(tRef.current.toastOutbid(name), 'bad');
+        call('me'); // the server has already given the held gold back
       }
       if (listing.bidderId === mine && listing.status !== 'open') myBids.current.delete(listing.id);
       if (kind === 'sold' && listing.bidderId === mine) {
