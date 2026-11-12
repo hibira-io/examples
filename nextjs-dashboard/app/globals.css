@@ -1,22 +1,22 @@
 :root {
-  --bg: #f6f7fb;
+  --bg: #faf9f7;
   --card: #ffffff;
-  --text: #14161f;
-  --muted: #646a7d;
-  --border: #e3e6ef;
-  --accent: #5b4bff;
+  --text: #111110;
+  --muted: #6f6d66;
+  --border: #e7e5e0;
+  --accent: #e5484d;
   --ok: #12a46b;
   --warn: #c98a00;
   --bad: #d23c3c;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1016;
-    --card: #171a23;
-    --text: #eef0f6;
-    --muted: #9aa0b4;
-    --border: #262a36;
-    --accent: #8f84ff;
+    --bg: #0f0f10;
+    --card: #1b1b1e;
+    --text: #f4f3f1;
+    --muted: #9b9991;
+    --border: #2b2b2f;
+    --accent: #ff6369;
   }
 }
 * {
@@ -189,13 +189,60 @@ button.secondary {
 .topbar a {
   text-decoration: none;
 }
-.topbar select {
+.lang-menu {
+  position: relative;
+}
+.lang-menu > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font: inherit;
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.lang-menu > button:hover,
+.lang-menu.open > button {
+  border-color: var(--accent);
+}
+.lang-menu > button svg {
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+.lang-menu.open > button svg {
+  transform: rotate(180deg);
+}
+.lang-menu ul {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 150px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(17, 17, 16, 0.16);
+}
+.lang-menu li {
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lang-menu li:hover,
+.lang-menu li:focus {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  outline: none;
+}
+.lang-menu li[aria-selected='true'] {
+  color: var(--accent);
+  font-weight: 600;
 }
 .topbar-links {
   display: flex;

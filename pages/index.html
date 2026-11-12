@@ -8,9 +8,9 @@
     <link rel="icon" href="https://hibira.io/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/svg+xml" href="https://hibira.io/portal/brand/favicon.svg" />
     <style>
-      :root { --bg: #f6f7fb; --card: #fff; --text: #14161f; --muted: #646a7d; --border: #e3e6ef; --accent: #5b4bff; }
+      :root { --bg: #faf9f7; --card: #fff; --text: #111110; --muted: #6f6d66; --border: #e7e5e0; --accent: #e5484d; --accent-ink: #fff; }
       @media (prefers-color-scheme: dark) {
-        :root { --bg: #0e1016; --card: #171a23; --text: #eef0f6; --muted: #9aa0b4; --border: #262a36; --accent: #8f84ff; }
+        :root { --bg: #0f0f10; --card: #1b1b1e; --text: #f4f3f1; --muted: #9b9991; --border: #2b2b2f; --accent: #ff6369; --accent-ink: #1a0b0c; }
       }
       * { box-sizing: border-box; }
       body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
@@ -18,7 +18,18 @@
       main { max-width: 880px; margin: 0 auto; padding: 32px 16px 48px; }
       nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
       nav a { text-decoration: none; font-weight: 600; }
-      select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
+      .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 1.05em; }
+      .brand img { width: 24px; height: 24px; }
+      .lang { position: relative; }
+      .lang > button { display: inline-flex; align-items: center; gap: 6px; font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+      .lang > button:hover, .lang.open > button { border-color: var(--accent); }
+      .lang > button svg { color: var(--muted); transition: transform 0.2s; }
+      .lang.open > button svg { transform: rotate(180deg); }
+      .lang ul { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 150px; margin: 0; padding: 6px; list-style: none; background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(17, 17, 16, 0.14); display: none; }
+      .lang.open ul { display: block; }
+      .lang li { padding: 7px 10px; border-radius: 7px; cursor: pointer; }
+      .lang li:hover, .lang li:focus { background: color-mix(in srgb, var(--accent) 10%, transparent); outline: none; }
+      .lang li[aria-selected='true'] { color: var(--accent); font-weight: 600; }
       h1 { font-size: 1.8em; margin: 32px 0 8px; }
       .muted { color: var(--muted); }
       .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
@@ -30,15 +41,18 @@
       .preview .tag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #3dd68c; }
       .card p { margin: 0; flex: 1; }
       .links { display: flex; gap: 16px; flex-wrap: wrap; }
-      .button { background: var(--accent); color: #fff; border-radius: 8px; padding: 6px 14px; text-decoration: none; font-weight: 600; }
+      .button { background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 6px 14px; text-decoration: none; font-weight: 600; }
       footer { margin-top: 40px; font-size: 0.9em; }
     </style>
   </head>
   <body>
     <main>
       <nav>
-        <a id="home" href="https://hibira.io/?utm_source=github&amp;utm_medium=demo&amp;utm_campaign=examples&amp;utm_content=index">Hibira</a>
-        <select id="lang" aria-label="Language"></select>
+        <a id="home" href="https://hibira.io/?utm_source=github&amp;utm_medium=demo&amp;utm_campaign=examples&amp;utm_content=index" class="brand"><img src="https://hibira.io/portal/brand/favicon.svg" alt="" width="24" height="24" />Hibira</a>
+        <div class="lang" id="lang">
+          <button type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Language"><span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+          <ul role="listbox" aria-label="Language"></ul>
+        </div>
       </nav>
       <h1 data-t="title"></h1>
       <p class="muted" data-t="intro"></p>
@@ -301,16 +315,52 @@
         document.title = s.title;
         for (const el of document.querySelectorAll('[data-t]')) el.textContent = s[el.dataset.t];
         for (const a of document.querySelectorAll('[data-demo]')) a.search = '?lang=' + lang;
-        select.value = lang;
+        menu.querySelector('button span').textContent = s.name;
+        for (const li of list.children) li.setAttribute('aria-selected', String(li.dataset.lang === lang));
       }
 
-      const select = document.getElementById('lang');
-      for (const l of LANGS) select.add(new Option(STRINGS[l].name, l));
-      select.addEventListener('change', () => {
+      const menu = document.getElementById('lang');
+      const list = menu.querySelector('ul');
+      const toggle = menu.querySelector('button');
+      function open(on) {
+        menu.classList.toggle('open', on);
+        toggle.setAttribute('aria-expanded', String(on));
+        if (on) (list.querySelector('[aria-selected="true"]') || list.firstElementChild).focus();
+      }
+      function pick(lang) {
         try {
-          localStorage.setItem('lang', select.value);
+          localStorage.setItem('lang', lang);
         } catch {}
-        apply(select.value);
+        apply(lang);
+        open(false);
+        toggle.focus();
+      }
+      for (const l of LANGS) {
+        const li = document.createElement('li');
+        li.role = 'option';
+        li.tabIndex = -1;
+        li.dataset.lang = l;
+        li.textContent = STRINGS[l].name;
+        li.addEventListener('click', () => pick(l));
+        list.appendChild(li);
+      }
+      toggle.addEventListener('click', () => open(!menu.classList.contains('open')));
+      list.addEventListener('keydown', (e) => {
+        const items = [...list.children];
+        const i = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (i >= 0) pick(items[i].dataset.lang);
+        } else if (e.key === 'Escape') {
+          open(false);
+          toggle.focus();
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target)) open(false);
       });
       apply(detect());
 
