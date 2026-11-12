@@ -70,6 +70,18 @@
           </div>
         </section>
         <section class="card">
+          <a class="preview" href="nextjs-sql-approvals/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/sql.webp" data-src="gallery/sql.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
+          <h2 data-t="sqlTitle"></h2>
+          <p class="muted" data-t="sqlText"></p>
+          <div class="links">
+            <a class="button" href="nextjs-sql-approvals/" data-t="open" data-demo></a>
+            <a href="https://github.com/hibira-io/examples/tree/main/nextjs-sql-approvals" data-t="source"></a>
+          </div>
+        </section>
+        <section class="card">
           <a class="preview" href="nextjs-lobby/" data-demo tabindex="-1" aria-hidden="true">
             <video muted loop playsinline preload="none" poster="gallery/lobby.webp" data-src="gallery/lobby.mp4"></video>
             <span class="tag" data-t="live"></span>
@@ -145,6 +157,8 @@
           spacesTitle: 'Shared trip planner',
           spacesText: 'Live cursors, avatars, field locks and follow mode in one form, with @hibira-io/spaces.',
           handoffTitle: 'Phone to desktop',
+          sqlTitle: 'Database changes, approved first',
+          sqlText: 'Reads run at once. A change shows a supervisor its exact SQL and estimated rows, and runs once after they approve it on their phone. The answer arrives on a Hibira channel.',
           handoffText: 'Scan a QR code, take a photo on your phone, and it lands in the form on your computer in a second. End-to-end encrypted, over WebRTC or a Hibira channel.',
           gamesTitle: 'Party games',
           gamesText: 'A shared pixel canvas, draw & guess and Connect Four, played over client events between browsers.',
@@ -166,6 +180,8 @@
           spacesTitle: '共同旅遊規劃',
           spacesText: '即時游標、頭像、欄位鎖定和跟隨模式，全在一張表單裡，使用 @hibira-io/spaces。',
           handoffTitle: '手機拍照傳電腦',
+          sqlTitle: '資料庫變更，先核准再執行',
+          sqlText: '查詢馬上執行。變更會讓主管看到確切的 SQL 和預計影響筆數，主管在手機上核准後才執行一次，結果經 Hibira 頻道即時送達。',
           handoffText: '掃描 QR 碼，用手機拍照，一秒就出現在電腦的表單裡。端對端加密，走 WebRTC 直連或 Hibira 頻道。',
           gamesTitle: '派對小遊戲',
           gamesText: '共用像素畫布、你畫我猜和四子棋，全靠瀏覽器之間的 client event 對戰。',
@@ -187,6 +203,8 @@
           spacesTitle: '共同旅行规划',
           spacesText: '实时光标、头像、字段锁定和跟随模式，全在一张表单里，使用 @hibira-io/spaces。',
           handoffTitle: '手机拍照传电脑',
+          sqlTitle: '数据库变更，先批准再执行',
+          sqlText: '查询马上执行。变更会让主管看到确切的 SQL 和预计影响行数，主管在手机上批准后才执行一次，结果经 Hibira 频道实时送达。',
           handoffText: '扫描二维码，用手机拍照，一秒就出现在电脑的表单里。端到端加密，走 WebRTC 直连或 Hibira 频道。',
           gamesTitle: '派对小游戏',
           gamesText: '共享像素画布、你画我猜和四子棋，全靠浏览器之间的 client event 对战。',
@@ -208,6 +226,8 @@
           spacesTitle: 'みんなで旅行プランナー',
           spacesText: 'ライブカーソル、アバター、項目ロック、フォローモードを 1 つのフォームで。@hibira-io/spaces を使っています。',
           handoffTitle: 'スマホからパソコンへ',
+          sqlTitle: 'データベース変更は承認してから',
+          sqlText: '参照はすぐに実行。変更は正確な SQL と影響する行数を上長に見せ、スマホで承認されてから一度だけ実行します。回答は Hibira のチャンネルで届きます。',
           handoffText: 'QR コードをスキャンしてスマホで撮影すると、1 秒でパソコンのフォームに届きます。エンドツーエンド暗号化、WebRTC または Hibira のチャンネル経由。',
           gamesTitle: 'パーティーゲーム',
           gamesText: 'みんなのピクセルキャンバス、お絵かき当てっこ、四目並べ。ブラウザ同士の client event で遊びます。',
@@ -229,6 +249,8 @@
           spacesTitle: '함께 짜는 여행 계획',
           spacesText: '실시간 커서, 아바타, 항목 잠금, 따라가기 모드를 하나의 양식에서. @hibira-io/spaces를 사용합니다.',
           handoffTitle: '휴대폰에서 컴퓨터로',
+          sqlTitle: '데이터베이스 변경은 승인 후에',
+          sqlText: '조회는 바로 실행됩니다. 변경은 정확한 SQL과 예상 행 수를 관리자에게 보여 주고, 휴대폰에서 승인한 뒤 한 번만 실행됩니다. 답은 Hibira 채널로 도착합니다.',
           handoffText: 'QR 코드를 스캔하고 휴대폰으로 사진을 찍으면 1초 만에 컴퓨터의 양식에 도착합니다. 종단 간 암호화, WebRTC 또는 Hibira 채널 경유.',
           gamesTitle: '파티 게임',
           gamesText: '함께 쓰는 픽셀 캔버스, 그림 맞히기, 사목 게임. 브라우저 사이의 client event로 플레이합니다.',
@@ -250,6 +272,8 @@
           spacesTitle: 'วางแผนเที่ยวด้วยกัน',
           spacesText: 'เคอร์เซอร์สด อวตาร การล็อกช่อง และโหมดติดตาม ในฟอร์มเดียว ด้วย @hibira-io/spaces',
           handoffTitle: 'จากมือถือสู่คอมพิวเตอร์',
+          sqlTitle: 'เปลี่ยนฐานข้อมูลหลังได้รับอนุมัติ',
+          sqlText: 'การอ่านทำงานทันที การเปลี่ยนแปลงจะแสดง SQL ที่แน่นอนและจำนวนแถวโดยประมาณให้หัวหน้าดู และทำงานครั้งเดียวหลังอนุมัติบนมือถือ คำตอบมาถึงผ่านช่อง Hibira',
           handoffText: 'สแกน QR โค้ด ถ่ายรูปด้วยมือถือ แล้วรูปจะไปอยู่ในฟอร์มบนคอมพิวเตอร์ในหนึ่งวินาที เข้ารหัสต้นทางถึงปลายทาง ผ่าน WebRTC หรือช่อง Hibira',
           gamesTitle: 'เกมปาร์ตี้',
           gamesText: 'ผืนผ้าใบพิกเซลร่วมกัน วาดแล้วทาย และเรียงสี่ เล่นผ่าน client event ระหว่างเบราว์เซอร์',
@@ -271,6 +295,8 @@
           spacesTitle: 'Lên kế hoạch du lịch cùng nhau',
           spacesText: 'Con trỏ trực tiếp, ảnh đại diện, khóa ô và chế độ theo dõi trong một biểu mẫu, với @hibira-io/spaces.',
           handoffTitle: 'Từ điện thoại sang máy tính',
+          sqlTitle: 'Thay đổi cơ sở dữ liệu, phê duyệt trước',
+          sqlText: 'Truy vấn đọc chạy ngay. Thay đổi cho quản lý xem đúng câu SQL và số dòng dự kiến, chỉ chạy một lần sau khi họ phê duyệt trên điện thoại. Câu trả lời đến qua kênh Hibira.',
           handoffText: 'Quét mã QR, chụp ảnh bằng điện thoại, ảnh sẽ vào biểu mẫu trên máy tính trong một giây. Mã hóa đầu cuối, qua WebRTC hoặc kênh Hibira.',
           gamesTitle: 'Trò chơi nhóm',
           gamesText: 'Bảng vẽ pixel chung, vẽ và đoán, và bốn quân thẳng hàng, chơi qua client event giữa các trình duyệt.',

@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           mkdir -p site
           cp -r pages/. site/
-          for app in nextjs-lobby nextjs-dashboard nextjs-spaces nextjs-games nextjs-handoff; do
+          for app in nextjs-lobby nextjs-dashboard nextjs-spaces nextjs-games nextjs-handoff nextjs-sql-approvals; do
             (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npx next build)
             cp -r "$app/out" "site/$app"
           done
