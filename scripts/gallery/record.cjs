@@ -7,7 +7,7 @@
 //   node scripts/gallery/record.cjs <site dir> <demo> <work dir> [lang]
 //   scripts/gallery/compose.sh <work dir> pages/gallery/<demo>.mp4
 //
-// <demo> is one of: lobby, dashboard, spaces, four, phaser. The real mouse
+// <demo> is one of: lobby, dashboard, spaces, four, phaser, handoff. The real mouse
 // glides in 16 ms steps so the other side gets a dense cursor trail, and
 // compose.sh keeps the 25 fps of the recording.
 const { chromium } = require('playwright');
@@ -23,9 +23,10 @@ const code = (n, abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ') =>
   Array.from({ length: n }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
 const uuid = () => require('crypto').randomUUID();
 
-async function side(browser, name, init, width = W) {
+async function side(browser, name, init, width = W, extra = {}) {
   const ctx = await browser.newContext({
     ignoreHTTPSErrors: true,
+    ...extra,
     viewport: { width, height: H },
     recordVideo: { dir: path.join(DIR, name), size: { width, height: H } },
   });
@@ -79,6 +80,34 @@ async function type(s, text, ms = 90) {
   }
 }
 const player = (name) => JSON.stringify({ id: uuid(), name });
+
+// The phone's camera for the handoff scene: a printed receipt on a table,
+// drawn by the browser and turned into the y4m file Chromium's fake camera plays.
+async function fakeCamera() {
+  const png = path.join(DIR, 'receipt.png');
+  const y4m = path.join(DIR, 'receipt.y4m');
+  const b = await chromium.launch();
+  const p = await b.newPage({ viewport: { width: 720, height: 1280 } });
+  const row = (a, z) => `<div class="r"><span>${a}</span><span>${z}</span></div>`;
+  await p.setContent(`<style>
+    body{margin:0;width:720px;height:1280px;display:grid;place-items:center;
+      background:repeating-linear-gradient(90deg,#5a3a22 0 38px,#634027 38px 41px,#573820 41px 90px);}
+    .p{width:470px;padding:42px 40px 54px;background:#f7f3ea;transform:rotate(3deg);
+      font:24px/1.45 'DejaVu Sans Mono',monospace;color:#222;box-shadow:0 18px 40px #0008}
+    h1{font-size:38px;text-align:center;margin:0 0 6px;letter-spacing:2px}.c{text-align:center;font-size:19px}
+    .r{display:flex;justify-content:space-between}hr{border:0;border-top:2px solid #333;margin:16px 0}
+    .t{font-size:32px;font-weight:700}.bar{height:70px;margin:24px 0 10px;
+      background:repeating-linear-gradient(90deg,#111 0 3px,transparent 3px 5px,#111 5px 6px,transparent 6px 10px)}
+  </style><div class="p"><h1>HIBI RAMEN</h1><div class="c">Store #12 · Table 4<br>2026-11-10 12:41</div><hr>
+    ${row('Tonkotsu Ramen', '¥980')}${row('Extra noodles', '¥210')}${row('Soft-boiled egg', '¥140')}${row('Green tea', '¥0')}<hr>
+    ${row('Subtotal', '¥1,330')}${row('Discount', '-¥50')}<div class="r t"><span>TOTAL</span><span>¥1,280</span></div>
+    <div class="c" style="text-align:left">Card **** 4821<br>Tax incl. (10%) ¥116</div><div class="bar"></div>
+    <div class="c">Thank you!</div></div>`);
+  await p.screenshot({ path: png });
+  await b.close();
+  require('child_process').execFileSync('ffmpeg', ['-v', 'error', '-y', '-loop', '1', '-i', png, '-t', '2', '-r', '15', '-pix_fmt', 'yuv420p', y4m]);
+  return y4m;
+}
 
 const SCENES = {
   // Two players in one room: ready, start, the reaction round, a chat line.
@@ -243,11 +272,48 @@ const SCENES = {
     await sleep(1800);
     return { L, R, t0 };
   },
+  // The handoff: a desktop expense form and a phone that scans its link and
+  // shoots a receipt (Chromium's fake camera plays receipt.y4m, see FAKE_CAMERA).
+  async handoff(b) {
+    const iphone =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+    const L = await side(b, 'left', {}, 1040);
+    const R = await side(b, 'right', {}, 360, { userAgent: iphone, isMobile: true, hasTouch: false });
+    await L.ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'https://demos.hibira.io' });
+    await R.ctx.grantPermissions(['camera'], { origin: 'https://demos.hibira.io' });
+    await L.page.goto(`${ORIGIN}nextjs-handoff/?lang=${LANG}`);
+    await L.page.locator('.pair .qr svg').waitFor();
+    await L.page.locator('.pair button.link').click();
+    const link = await L.page.evaluate(() => navigator.clipboard.readText());
+    await R.page.goto('about:blank');
+    const t0 = Date.now();
+    await sleep(600);
+    await R.page.goto(link);
+    await L.page.locator('.pair.paired').waitFor({ timeout: 15000 });
+    await R.page.locator('.viewfinder video:not(.hidden)').waitFor({ timeout: 15000 });
+    await sleep(1200);
+    await click(L, L.page.locator('.form input').first());
+    await type(L, 'Hibi Ramen', 80);
+    await sleep(300);
+    await click(R, '.shutter', 500);
+    await L.page.locator('.receipt.landed').first().waitFor({ timeout: 20000 });
+    await sleep(500);
+    await click(L, L.page.locator('.form input').nth(1));
+    await type(L, '1,280', 90);
+    await click(L, L.page.locator('.form input').nth(2));
+    await type(L, '2026-11-10', 60);
+    await sleep(300);
+    await click(R, '.shutter', 400);
+    await L.page.locator('.receipt.landed').nth(1).waitFor({ timeout: 20000 });
+    await sleep(1800);
+    return { L, R, t0 };
+  },
 };
 
 (async () => {
   if (!SCENES[DEMO]) throw new Error('unknown demo ' + DEMO);
-  const b = await chromium.launch({ proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : undefined });
+  const args = DEMO === 'handoff' ? ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${await fakeCamera()}`] : [];
+  const b = await chromium.launch({ args, proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : undefined });
   const { L, R, t0 } = await SCENES[DEMO](b);
   const tEnd = Date.now();
   if (process.env.SHOTS) {
