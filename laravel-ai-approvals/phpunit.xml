@@ -39,6 +39,12 @@
         <env name="DEMO_MOCK_AI_DELAY_MS" value="0"/>
         <env name="DEMO_MOCK_AI_FAILURE" value="false"/>
         <env name="DEMO_MODE" value="false"/>
+        <!-- Some broadcasts (the Filament plugin's live table refresh) bypass
+             FakeHibira: point them at a closed local port so tests never send
+             to the real Hibira service. -->
+        <env name="HIBIRA_HOST" value="127.0.0.1"/>
+        <env name="HIBIRA_PORT" value="9"/>
+        <env name="HIBIRA_SCHEME" value="http"/>
         <env name="HIBIRA_APP_ID" value="test-app"/>
         <env name="HIBIRA_APP_KEY" value="test-key"/>
         <env name="HIBIRA_APP_SECRET" value="test-secret-not-real"/>
