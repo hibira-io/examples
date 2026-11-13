@@ -1141,10 +1141,11 @@ const covered = (host, domains) => domains.some((d) => host === d || host.endsWi
 /** @param {string} s */
 function slug(s) {
   const out = s
+    .slice(0, 200)
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/^-|-$/g, "")
     .slice(0, 40);
   return out.length >= 2 ? out : "";
 }
