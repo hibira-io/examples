@@ -73,7 +73,7 @@ that sends the two emails (`kind: "code"` and `kind: "turn"`).
 ## Change it
 
 - **Products:** `INVITE_PRODUCTS` in `.env.local`, as JSON
-  (`[{"id":"cursor","name":"Cursor","icon":"cursor.png"}]`; `names`
+  (`[{"id":"lovable","name":"Lovable","icon":"lovable.png"}]`; `names`
   adds a name per language, `icon` is a file in `public/products` or an https
   URL).
 - **Bot check:** set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
