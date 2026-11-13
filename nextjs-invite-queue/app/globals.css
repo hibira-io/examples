@@ -1216,3 +1216,23 @@ a.button.secondary {
 .pick-more .vendor-link {
   margin: 0;
 }
+/* The lines a person is in, one per brand (QueueView.tsx Line). */
+.my-lines {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.my-lines li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.my-lines li > button {
+  margin-left: auto;
+}

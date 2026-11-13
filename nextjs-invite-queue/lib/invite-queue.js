@@ -78,7 +78,7 @@ export class QueueError extends Error {
  * @typedef {{ to: string, kind: "code" | "turn", lang: string, code?: string, product?: string, deadline?: number, link?: string }} Mail
  * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string, hosts?: string[], kind?: "invite" | "referral", uses?: number, vendor?: string, hidden?: boolean, at?: number }} Product
  * @typedef {{ id: string, uid: string, at: number, dns: Record<string, { token: string, verified?: number }>, dnsChecked?: number, keyHash?: string, keyHint?: string, keyAt?: number, webhook?: { url: string, secret: string } | null, disabled?: boolean }} Vendor
- * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, vouched?: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, reported: number }} User
+ * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, vouched?: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, cooldowns?: Record<string, number>, reported: number }} User
  * @typedef {{ seq: number, uid: string, products: string[], at: number, state: "waiting" | "offered", codeId?: number, deadline?: number, requeued?: boolean, avoid?: string[] }} Entry
  * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad", vendor?: string, group?: number }} Code
  * @typedef {{ id: number, uid: string, name: string, text: string, at: number, reports: string[] }} ChatMessage
@@ -135,6 +135,7 @@ export class InviteQueue {
     for (const [k, s] of await get("s:")) this.sessions.set(k.slice(2), s);
     for (const [k, o] of await get("o:")) this.otps.set(k.slice(2), o);
     for (const [, e] of await get("e:")) this.entries.set(e.seq, e);
+    await this.splitEntries();
     for (const [, c] of await get("c:")) this.codes.set(c.id, c);
     this.chat = (await this.storage.get("chat")) ?? [];
     for (const [, v] of await get("v:")) this.vendors.set(v.id, v);
@@ -279,10 +280,40 @@ export class InviteQueue {
     await this.saveCode(c);
   }
 
-  /** @param {string} uid */
-  entryOf(uid) {
-    for (const e of this.entries.values()) if (e.uid === uid) return e;
+  /**
+   * Each brand has its own line, and a person waits in one of them at a
+   * time. A place stored before that, for several products, keeps the one
+   * being offered, else the first.
+   */
+  async splitEntries() {
+    for (const e of [...this.entries.values()]) {
+      if (e.products.length <= 1) continue;
+      const code = e.state === "offered" && e.codeId !== undefined ? this.codes.get(e.codeId) : undefined;
+      e.products = [code?.product ?? e.products[0]];
+      await this.saveEntry(e);
+    }
+  }
+
+  /** A person's place in one product's line. @param {string} uid @param {string} product */
+  entryOf(uid, product) {
+    for (const e of this.entries.values()) if (e.uid === uid && e.products[0] === product) return e;
     return undefined;
+  }
+
+  /** A person's places, one per product's line, oldest first. @param {string} uid */
+  entriesOf(uid) {
+    return [...this.entries.values()].filter((e) => e.uid === uid).sort((a, b) => a.seq - b.seq);
+  }
+
+  /** The place someone is being offered a code at: for that product if named, else the first. @param {string} uid @param {unknown} product */
+  offeredOf(uid, product) {
+    return this.entriesOf(uid).find((e) => e.state === "offered" && (typeof product !== "string" || !product || e.products[0] === product));
+  }
+
+  /** Until when a person waits before getting in a product's line again. @param {User} u @param {string} product */
+  cooldownOf(u, product) {
+    const until = u.cooldowns?.[product] ?? 0;
+    return until > this.now() ? until : 0;
   }
 
   /** Offers each open code to the first person in line who wants it. */
@@ -368,7 +399,7 @@ export class InviteQueue {
         open: [...this.codes.values()].filter((c) => c.product === p.id && c.state === "open").length,
         waiting: waiting.filter((e) => e.state === "waiting" && e.products.includes(p.id)).length,
       })),
-      waiting: waiting.filter((e) => e.state === "waiting").length,
+      waiting: new Set(waiting.filter((e) => e.state === "waiting").map((e) => e.uid)).size,
       served: this.meta.served,
       holdHours: HOLD_MS / 3_600_000,
     };
@@ -377,19 +408,22 @@ export class InviteQueue {
   /** @param {User} u */
   me(u) {
     const now = this.now();
-    const e = this.entryOf(u.uid);
-    let entry = null;
-    if (e) {
-      const ahead = [...this.entries.values()].filter((x) => x.state === "waiting" && x.seq < e.seq && x.products.some((p) => e.products.includes(p))).length;
+    const entries = this.entriesOf(u.uid).map((e) => {
+      const product = e.products[0];
+      const ahead = [...this.entries.values()].filter((x) => x.state === "waiting" && x.seq < e.seq && x.products[0] === product).length;
       const code = e.codeId !== undefined ? this.codes.get(e.codeId) : undefined;
-      entry = {
+      return {
+        product,
         state: e.state,
         products: e.products,
         joinedAt: e.at,
         ahead: e.state === "waiting" ? ahead : 0,
         offer: e.state === "offered" && code ? { product: code.product, deadline: e.deadline } : null,
       };
-    }
+    });
+    const entry = entries.find((x) => x.offer) ?? entries[0] ?? null;
+    /** @type {Record<string, number>} */ const cooldowns = {};
+    for (const [product, until] of Object.entries(u.cooldowns ?? {})) if (until > now) cooldowns[product] = until;
     const taken = [...this.codes.values()].filter((c) => c.taker === u.uid).sort((a, b) => (b.takenAt ?? 0) - (a.takenAt ?? 0));
     /** @type {Map<number, Code[]>} */ const groups = new Map();
     for (const c of this.codes.values()) if (c.donor === u.uid) groups.set(groupOf(c), [...(groups.get(groupOf(c)) ?? []), c]);
@@ -412,8 +446,10 @@ export class InviteQueue {
       blocked: u.blocked || u.banned,
       strikes: u.strikes,
       newGiver: !u.vouched && !this.isAdmin(u),
-      cooldownUntil: u.cooldownUntil > now ? u.cooldownUntil : 0,
+      cooldownUntil: 0,
+      cooldowns,
       entry,
+      entries,
       taken: taken.map((c) => ({ id: c.id, product: c.product, value: c.value, takenAt: c.takenAt, report: c.report ?? null, canReport: !c.report && now - (c.takenAt ?? 0) < REPORT_WINDOW_MS })),
       given,
     };
@@ -568,10 +604,8 @@ export class InviteQueue {
     }
     if (this.listed.some((p) => p.id === productId)) return;
     for (const e of [...this.entries.values()]) {
-      if (!e.products.includes(productId) || e.state !== "waiting") continue;
-      e.products = e.products.filter((x) => x !== productId);
-      if (e.products.length) await this.saveEntry(e);
-      else await this.dropEntry(e);
+      if (e.products[0] !== productId || e.state !== "waiting") continue;
+      await this.dropEntry(e);
       await this.notify(e.uid);
     }
   }
@@ -703,41 +737,42 @@ const ROUTES = {
 
   async "POST /queue/join"({ body, user }) {
     this.must(user);
+    // One brand's line, and one at a time: someone in a line leaves it
+    // before getting in another (a list from an older page takes its first).
     const ids = new Set(this.products.map((p) => p.id));
-    const products = [...new Set(Array.isArray(body.products) ? body.products.map(String) : [])].filter((p) => ids.has(p));
-    if (!products.length) throw new QueueError(400, "products");
-    if (user.cooldownUntil > this.now()) throw new QueueError(409, "cooldown");
-    const current = this.entryOf(user.uid);
-    if (current) {
-      if (current.state === "offered") throw new QueueError(409, "offered");
-      current.products = products;
-      await this.saveEntry(current);
-    } else {
-      this.meta.seq += 1;
-      await this.saveMeta();
-      await this.saveEntry({ seq: this.meta.seq, uid: user.uid, products, at: this.now(), state: "waiting" });
-    }
+    const product = String(typeof body.product === "string" ? body.product : Array.isArray(body.products) ? body.products[0] : "");
+    if (!ids.has(product)) throw new QueueError(400, "products");
+    const current = this.entriesOf(user.uid)[0];
+    if (current?.products[0] === product) return { me: this.me(user) };
+    if (current) throw new QueueError(409, current.state === "offered" ? "offered" : "one_line");
+    if (this.cooldownOf(user, product)) throw new QueueError(409, "cooldown");
+    this.meta.seq += 1;
+    await this.saveMeta();
+    await this.saveEntry({ seq: this.meta.seq, uid: user.uid, products: [product], at: this.now(), state: "waiting" });
     await this.match();
     await this.announce();
     return { me: this.me(user) };
   },
 
-  async "POST /queue/leave"({ user }) {
+  async "POST /queue/leave"({ body, user }) {
     this.must(user);
-    const e = this.entryOf(user.uid);
-    if (e) {
+    const product = typeof body?.product === "string" ? body.product : "";
+    const leaving = this.entriesOf(user.uid).filter((e) => !product || e.products[0] === product);
+    for (const e of leaving) {
       const code = e.codeId !== undefined ? this.codes.get(e.codeId) : undefined;
       await this.dropEntry(e);
       if (code && code.state === "offered") await this.reopen(code);
+    }
+    if (leaving.length) {
       await this.match();
       await this.announce();
     }
     return { me: this.me(user) };
   },
 
-  async "POST /offer/take"({ user }) {
+  async "POST /offer/take"({ body, user }) {
     this.must(user);
-    const e = this.entryOf(user.uid);
+    const e = this.offeredOf(user.uid, body?.product);
     const code = e?.codeId !== undefined ? this.codes.get(e.codeId) : undefined;
     if (!e || e.state !== "offered" || !code) throw new QueueError(409, "no_offer");
     const now = this.now();
@@ -747,7 +782,7 @@ const ROUTES = {
     delete code.seq;
     await this.saveCode(code);
     await this.dropEntry(e);
-    user.cooldownUntil = now + CLAIM_COOLDOWN_MS;
+    user.cooldowns = { ...user.cooldowns, [code.product]: now + CLAIM_COOLDOWN_MS };
     await this.saveUser(user);
     this.meta.served += 1;
     await this.saveMeta();
@@ -761,9 +796,9 @@ const ROUTES = {
     return { me: this.me(user), code: { id: code.id, product: code.product, value: code.value } };
   },
 
-  async "POST /offer/pass"({ user }) {
+  async "POST /offer/pass"({ body, user }) {
     this.must(user);
-    const e = this.entryOf(user.uid);
+    const e = this.offeredOf(user.uid, body?.product);
     const code = e?.codeId !== undefined ? this.codes.get(e.codeId) : undefined;
     if (!e || e.state !== "offered" || !code) throw new QueueError(409, "no_offer");
     await this.dropEntry(e);
@@ -805,16 +840,18 @@ const ROUTES = {
         await this.saveUser(donor);
       }
       const now = this.now();
-      if (now - user.reported > 7 * 24 * 3_600_000 && !this.entryOf(user.uid)) {
+      const cooldowns = { ...user.cooldowns };
+      delete cooldowns[code.product];
+      if (now - user.reported > 7 * 24 * 3_600_000 && !this.entryOf(user.uid, code.product)) {
         user.reported = now;
-        user.cooldownUntil = 0;
+        user.cooldowns = cooldowns;
         await this.saveUser(user);
         // Back in line, ahead of everyone still waiting.
         await this.saveEntry({ seq: lowestFreeSeq(this), uid: user.uid, products: [code.product], at: now, state: "waiting", requeued: true, ...(code.vendor ? {} : { avoid: [code.donor] }) });
         await this.match();
         await this.announce();
       } else {
-        user.cooldownUntil = 0;
+        user.cooldowns = cooldowns;
         await this.saveUser(user);
       }
     }
@@ -1116,8 +1153,7 @@ const ROUTES = {
     target.banned = true;
     target.blocked = true;
     await this.saveUser(target);
-    const e = this.entryOf(target.uid);
-    if (e) {
+    for (const e of this.entriesOf(target.uid)) {
       const code = e.codeId !== undefined ? this.codes.get(e.codeId) : undefined;
       await this.dropEntry(e);
       if (code) await this.reopen(code);

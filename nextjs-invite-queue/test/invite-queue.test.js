@@ -78,8 +78,9 @@ test("a given code goes to the first person in line who wants it, and only they 
   const gamer = await signIn("gamer@example.com");
   await call("POST", "/queue/join", { products: ["game"] }, gamer);
   await call("POST", "/queue/join", { products: ["alpha"] }, first);
-  await call("POST", "/queue/join", { products: ["alpha", "game"] }, second);
-  assert.equal((await call("GET", "/state", undefined, second)).body.me.entry.ahead, 2);
+  await call("POST", "/queue/join", { product: "alpha" }, second);
+  // Each brand has its own line: only the alpha line counts.
+  assert.equal((await call("GET", "/state", undefined, second)).body.me.entry.ahead, 1);
 
   const gave = await call("POST", "/codes", { product: "alpha", codes: ["ALPHA-1234"] }, giver);
   assert.equal(gave.status, 200);
@@ -481,4 +482,34 @@ test("vendors survive a restart", async () => {
   const second = setup({ storage });
   const state = (await second.call("GET", "/state")).body;
   assert.equal(state.products.find((p) => p.id === "acme").official, true);
+});
+
+test("a person waits in one brand's line at a time, and the wait after taking a code is per brand", async () => {
+  const { call, signIn } = setup();
+  const giver = await signIn("giver@example.com");
+  const one = await signIn("one@example.com");
+  assert.equal((await call("POST", "/queue/join", { product: "alpha" }, one)).status, 200);
+  const other = await call("POST", "/queue/join", { product: "game" }, one);
+  assert.equal(other.status, 409);
+  assert.equal(other.body.error, "one_line");
+  assert.equal((await call("POST", "/queue/join", { product: "alpha" }, one)).status, 200, "the same line again is fine");
+
+  await call("POST", "/codes", { product: "alpha", codes: ["ALPHA-1"] }, giver);
+  const took = await call("POST", "/offer/take", {}, one);
+  assert.equal(took.body.code.value, "ALPHA-1");
+  assert.equal(took.body.me.entries.length, 0);
+  assert.ok(took.body.me.cooldowns.alpha > 0);
+  assert.equal((await call("POST", "/queue/join", { product: "alpha" }, one)).status, 409, "waits before the same brand again");
+  assert.equal((await call("POST", "/queue/join", { product: "game" }, one)).status, 200, "another brand is open right away");
+});
+
+test("a place stored for several brands keeps one", async () => {
+  const { q, call, signIn } = setup();
+  const old = await signIn("old@example.com");
+  const uid = (await call("GET", "/state", undefined, old)).body.me.uid;
+  await q.storage.put("e:99", { seq: 99, uid, products: ["alpha", "game"], at: 1, state: "waiting" });
+  q.loaded = false;
+  q.entries.clear();
+  const me = (await call("GET", "/state", undefined, old)).body.me;
+  assert.deepEqual(me.entries.map((e) => e.product), ["alpha"]);
 });
