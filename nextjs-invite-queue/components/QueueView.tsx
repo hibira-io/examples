@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { useLang, useT } from './I18n';
-import { API, AUTH_URL, SIGNUP_URL, SOURCE_URL } from '@/lib/demo';
+import Link from 'next/link';
+import { API, AUTH_URL, SIGNUP_URL, SOURCE_URL, iconUrl } from '@/lib/demo';
 import type { ErrorCode } from '@/lib/strings';
 
 // The whole page: the line, the email sign-in, giving codes and the chat.
@@ -11,7 +12,7 @@ import type { ErrorCode } from '@/lib/strings';
 // something changed: "state" on the public channel invite-queue, "me" on
 // the person's own private channel. Chat messages arrive in full.
 
-type Product = { id: string; name: string; names?: Record<string, string>; open: number; waiting: number };
+type Product = { id: string; name: string; names?: Record<string, string>; icon?: string; open: number; waiting: number };
 type Message = { id: number; uid: string; name: string; text: string; at: number };
 type Taken = { id: number; product: string; value: string; takenAt: number; report: 'ok' | 'bad' | null; canReport: boolean };
 type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null };
@@ -68,7 +69,22 @@ async function api<T>(path: string, token: string, body?: unknown): Promise<T> {
   return data as T;
 }
 
-export default function QueueView({ appKey, host, port, tls }: { appKey: string; host: string; port: number; tls: boolean }) {
+export default function QueueView({
+  appKey,
+  host,
+  port,
+  tls,
+  view,
+  turnstile = '',
+}: {
+  appKey: string;
+  host: string;
+  port: number;
+  tls: boolean;
+  view: View;
+  /** Cloudflare Turnstile site key: when set, sending an email code needs the check. */
+  turnstile?: string;
+}) {
   const t = useT();
   const lang = useLang();
   const [state, setState] = useState<State | null>(null);
@@ -242,6 +258,16 @@ export default function QueueView({ appKey, host, port, tls }: { appKey: string;
         </li>
       </ul>
 
+      <nav className="tabs">
+        <Link href="/" className={'tab' + (view === 'get' ? ' tab-on' : '')} aria-current={view === 'get' ? 'page' : undefined}>
+          {t.lineTitle}
+          {view !== 'get' && me?.entry?.state === 'offered' && <span className="tab-alert" aria-hidden="true" />}
+        </Link>
+        <Link href="/give" className={'tab' + (view === 'give' ? ' tab-on' : '')} aria-current={view === 'give' ? 'page' : undefined}>
+          {t.giveTitle}
+        </Link>
+      </nav>
+
       {error && (
         <p className="error" role="alert">
           {error}
@@ -263,7 +289,9 @@ export default function QueueView({ appKey, host, port, tls }: { appKey: string;
               <tbody>
                 {state.products.map((p) => (
                   <tr key={p.id}>
-                    <td>{name(p.id)}</td>
+                    <td>
+                      <ProductName product={p} name={name} />
+                    </td>
                     <td className="num">{p.open}</td>
                     <td className="num">{p.waiting}</td>
                   </tr>
@@ -273,13 +301,18 @@ export default function QueueView({ appKey, host, port, tls }: { appKey: string;
           </section>
 
           {!me ? (
-            <SignIn lang={lang} onDone={signedIn} run={run} />
+            <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
           ) : (
             <>
               <Account me={me} call={call} onSignOut={signOut} />
-              <Line me={me} products={state.products} call={call} name={name} lang={lang} />
-              {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
-              <Give me={me} products={state.products} call={call} name={name} />
+              {view === 'get' ? (
+                <>
+                  <Line me={me} products={state.products} call={call} name={name} lang={lang} />
+                  {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
+                </>
+              ) : (
+                <Give me={me} products={state.products} call={call} name={name} />
+              )}
             </>
           )}
 
@@ -321,18 +354,21 @@ function notify(title: string, body: string) {
 type Run = <T>(fn: () => Promise<T>) => Promise<T | undefined>;
 type Call = (path: string, body?: unknown) => Promise<({ me?: Me } & Record<string, unknown>) | undefined>;
 
-function SignIn({ lang, onDone, run }: { lang: string; onDone: (token: string, me: Me) => void; run: Run }) {
+function SignIn({ lang, onDone, run, turnstile }: { lang: string; onDone: (token: string, me: Me) => void; run: Run; turnstile: string }) {
   const t = useT();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const human = useTurnstile(turnstile, lang);
+  const waiting = human.on && !human.token;
 
   const send = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setBusy(true);
-    const ok = await run(() => api('/auth/start', '', { email, lang }));
+    const ok = await run(() => api('/auth/start', '', { email, lang, human: human.token || undefined }));
     setBusy(false);
+    human.reset();
     if (ok) setSent(true);
   };
   const verify = async (e: React.FormEvent) => {
@@ -347,13 +383,14 @@ function SignIn({ lang, onDone, run }: { lang: string; onDone: (token: string, m
     <section className="card">
       <h2>{t.signInTitle}</h2>
       <p className="muted small">{t.signInHint}</p>
+      {human.on && <div ref={human.ref} className="human" />}
       {!sent ? (
         <form onSubmit={send} className="row">
           <label className="grow">
             <span className="sr-only">{t.email}</span>
             <input type="email" required autoComplete="email" placeholder={t.email} value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
-          <button className="primary" disabled={busy}>
+          <button className="primary" disabled={busy || waiting}>
             {t.sendCode}
           </button>
         </form>
@@ -370,7 +407,7 @@ function SignIn({ lang, onDone, run }: { lang: string; onDone: (token: string, m
             </button>
           </form>
           <p className="links small">
-            <button type="button" className="link" onClick={() => send()} disabled={busy}>
+            <button type="button" className="link" onClick={() => send()} disabled={busy || waiting}>
               {t.resend}
             </button>
             <button type="button" className="link" onClick={() => (setSent(false), setCode(''))}>
@@ -478,7 +515,7 @@ function Line({ me, products, call, name, lang }: { me: Me; products: Product[];
             {products.map((p) => (
               <label key={p.id} className="choice">
                 <input type="checkbox" checked={pick.includes(p.id)} onChange={() => toggle(p.id)} />
-                <span>{name(p.id)}</span>
+                <ProductName product={p} name={name} />
               </label>
             ))}
           </fieldset>
@@ -716,3 +753,83 @@ function color(uid: string) {
   for (const ch of uid) h = (h * 31 + ch.charCodeAt(0)) % 360;
   return `hsl(${h} 55% 45%)`;
 }
+
+function ProductName({ product, name }: { product: Product; name: (id: string) => string }) {
+  const src = iconUrl(product.icon);
+  return (
+    <span className="product-name">
+      {src ? <img src={src} alt="" width={20} height={20} /> : <span className="product-dot" aria-hidden="true" />}
+      <span>{name(product.id)}</span>
+    </span>
+  );
+}
+
+type Turnstile = {
+  render(el: HTMLElement, options: Record<string, unknown>): string;
+  reset(id: string): void;
+  remove(id: string): void;
+};
+
+let turnstileScript: Promise<Turnstile> | null = null;
+
+function loadTurnstile(): Promise<Turnstile> {
+  turnstileScript ??= new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true;
+    s.onload = () => {
+      const ts = (window as unknown as { turnstile?: Turnstile }).turnstile;
+      if (ts) resolve(ts);
+      else reject(new Error('turnstile'));
+    };
+    s.onerror = () => {
+      turnstileScript = null;
+      reject(new Error('turnstile'));
+    };
+    document.head.appendChild(s);
+  });
+  return turnstileScript;
+}
+
+// Cloudflare Turnstile before an email code goes out. It shows itself only
+// when Cloudflare wants the person to click; the token is good for one send.
+function useTurnstile(siteKey: string, lang: string) {
+  const ref = useRef<HTMLDivElement>(null);
+  const widget = useRef<{ ts: Turnstile; id: string } | null>(null);
+  const [token, setToken] = useState('');
+
+  useEffect(() => {
+    if (!siteKey) return;
+    let gone = false;
+    loadTurnstile().then(
+      (ts) => {
+        if (gone || !ref.current) return;
+        const id = ts.render(ref.current, {
+          sitekey: siteKey,
+          language: lang.toLowerCase(),
+          appearance: 'interaction-only',
+          callback: (t: string) => setToken(t),
+          'expired-callback': () => setToken(''),
+          'error-callback': () => setToken(''),
+        });
+        widget.current = { ts, id };
+      },
+      () => {},
+    );
+    return () => {
+      gone = true;
+      if (widget.current) widget.current.ts.remove(widget.current.id);
+      widget.current = null;
+      setToken('');
+    };
+  }, [siteKey, lang]);
+
+  const reset = useCallback(() => {
+    setToken('');
+    if (widget.current) widget.current.ts.reset(widget.current.id);
+  }, []);
+
+  return { ref, token, reset, on: Boolean(siteKey) };
+}
+
+export type View = 'get' | 'give';

@@ -10,6 +10,15 @@ export const HIBIRA_URL = 'https://hibira.io/?utm_source=demos&utm_medium=tool&u
 
 export const SIGNUP_URL = 'https://hibira.io/portal?utm_source=demos&utm_medium=tool&utm_campaign=invite-queue';
 
+/** Where public/ is served: the demo's base path, or the site root. */
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
+/** A product icon's address: a file in public/products, or a full URL. */
+export function iconUrl(icon?: string): string {
+  if (!icon) return '';
+  return icon.startsWith('https://') ? icon : `${BASE_PATH}/products/${icon}`;
+}
+
 /** Base URL of the queue's API: this app's routes, or the demo backend's. */
 export const API = DEMO_API ? `${DEMO_API}/invite-queue` : '/api/queue';
 

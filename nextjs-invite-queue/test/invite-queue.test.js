@@ -214,3 +214,35 @@ test("state survives a restart from storage", async () => {
   assert.equal((await two.call("POST", "/offer/take", {}, a)).body.code.value, "KEEP-1234");
   assert.ok(two.q.nextAlarm() > clock.t);
 });
+
+test("with a bot check, an email code needs a passed challenge", async () => {
+  const mails = [];
+  const seen = [];
+  const q = new InviteQueue({
+    storage: new MemoryStorage(),
+    products: PRODUCTS,
+    sendMail: async (m) => mails.push(m),
+    verifyHuman: async (token, ip) => (seen.push([token, ip]), token === "pass"),
+  });
+  const start = (human) => q.handle({ method: "POST", path: "/auth/start", body: { email: "h@example.com", human }, token: "", ip: "2.2.2.2" });
+  assert.equal((await start(undefined)).body.error, "human");
+  assert.equal((await start("fail")).body.error, "human");
+  assert.equal(mails.length, 0);
+  assert.equal((await start("pass")).status, 200);
+  assert.equal(mails.length, 1);
+  assert.deepEqual(seen.at(-1), ["pass", "2.2.2.2"]);
+});
+
+test("product icons pass only as a shipped file name or an https URL", async () => {
+  const q = new InviteQueue({
+    storage: new MemoryStorage(),
+    products: [
+      { id: "a", name: "A", icon: "claude-code.png" },
+      { id: "b", name: "B", icon: "https://cdn.example/b.svg" },
+      { id: "c", name: "C", icon: "javascript:alert(1)" },
+      { id: "d", name: "D", icon: "../secret.svg" },
+    ],
+  });
+  await q.load();
+  assert.deepEqual(q.counts().products.map((p) => p.icon), ["claude-code.png", "https://cdn.example/b.svg", "", ""]);
+});

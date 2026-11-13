@@ -1,7 +1,7 @@
 import type { Lang } from './i18n';
 
 export type ErrorCode =
-  | 'sign_in' | 'banned' | 'email' | 'wait' | 'too_many' | 'code_expired' | 'code_wrong' | 'name' | 'products' | 'cooldown'
+  | 'sign_in' | 'banned' | 'email' | 'wait' | 'too_many' | 'human' | 'code_expired' | 'code_wrong' | 'name' | 'products' | 'cooldown'
   | 'offered' | 'no_offer' | 'reported' | 'blocked' | 'code' | 'too_many_codes' | 'duplicate' | 'in_use' | 'text'
   | 'slow_down' | 'not_found' | 'forbidden' | 'network';
 
@@ -105,6 +105,7 @@ const en = {
     email: 'Please enter a valid email address.',
     wait: 'Please wait a minute before asking for another code.',
     too_many: 'Too many codes asked for. Please try again in an hour.',
+    human: 'Please finish the check above, then send the code again.',
     code_expired: 'This code has expired. Ask for a new one.',
     code_wrong: 'That code is not right. Check the email and try again.',
     name: 'Please enter a name.',
@@ -219,6 +220,7 @@ const zhTW: Strings = {
     email: '請輸入正確的 Email。',
     wait: '請等一分鐘再要新的驗證碼。',
     too_many: '驗證碼要求次數太多，請一小時後再試。',
+    human: '請先完成上方的驗證，再寄一次驗證碼。',
     code_expired: '驗證碼已失效，請重新寄送。',
     code_wrong: '驗證碼不正確，請確認信件後再試一次。',
     name: '請輸入名稱。',
@@ -331,6 +333,7 @@ const zhCN: Strings = {
     email: '请输入正确的邮箱。',
     wait: '请等一分钟再要新的验证码。',
     too_many: '验证码请求次数太多，请一小时后再试。',
+    human: '请先完成上方的验证，再发送一次验证码。',
     code_expired: '验证码已失效，请重新发送。',
     code_wrong: '验证码不正确，请确认邮件后再试一次。',
     name: '请输入名称。',
@@ -443,6 +446,7 @@ const ja: Strings = {
     email: '正しいメールアドレスを入力してください。',
     wait: '新しいコードは 1 分ほど待ってからお試しください。',
     too_many: 'コードのリクエストが多すぎます。1 時間後にお試しください。',
+    human: '上の確認を済ませてから、もう一度コードを送ってください。',
     code_expired: 'コードの有効期限が切れました。もう一度送ってください。',
     code_wrong: 'コードが正しくありません。メールを確認してもう一度お試しください。',
     name: '名前を入力してください。',
@@ -555,6 +559,7 @@ const ko: Strings = {
     email: '올바른 이메일 주소를 입력해 주세요.',
     wait: '새 코드는 1분 후에 요청해 주세요.',
     too_many: '코드 요청이 너무 많습니다. 1시간 후에 다시 시도해 주세요.',
+    human: '위의 확인을 마친 뒤 코드를 다시 보내 주세요.',
     code_expired: '코드가 만료되었습니다. 새 코드를 받아 주세요.',
     code_wrong: '코드가 올바르지 않습니다. 이메일을 확인하고 다시 시도해 주세요.',
     name: '이름을 입력해 주세요.',
@@ -667,6 +672,7 @@ const th: Strings = {
     email: 'โปรดกรอกอีเมลให้ถูกต้อง',
     wait: 'โปรดรอสักหนึ่งนาทีก่อนขอรหัสใหม่',
     too_many: 'ขอรหัสบ่อยเกินไป โปรดลองใหม่ในอีกหนึ่งชั่วโมง',
+    human: 'โปรดยืนยันด้านบนให้เสร็จ แล้วส่งรหัสอีกครั้ง',
     code_expired: 'รหัสหมดอายุแล้ว โปรดขอรหัสใหม่',
     code_wrong: 'รหัสไม่ถูกต้อง โปรดตรวจสอบอีเมลแล้วลองอีกครั้ง',
     name: 'โปรดกรอกชื่อ',
@@ -779,6 +785,7 @@ const vi: Strings = {
     email: 'Vui lòng nhập email hợp lệ.',
     wait: 'Vui lòng đợi một phút trước khi yêu cầu mã mới.',
     too_many: 'Yêu cầu mã quá nhiều. Vui lòng thử lại sau một giờ.',
+    human: 'Vui lòng hoàn tất bước xác minh ở trên rồi gửi lại mã.',
     code_expired: 'Mã đã hết hạn. Hãy yêu cầu mã mới.',
     code_wrong: 'Mã không đúng. Hãy kiểm tra email và thử lại.',
     name: 'Vui lòng nhập tên.',

@@ -55,7 +55,7 @@ export class QueueError extends Error {
 /**
  * @typedef {{ get(key: string): Promise<any>, put(key: string, value: any): Promise<void>, delete(keys: string | string[]): Promise<unknown>, list(o: { prefix: string }): Promise<Map<string, any>> }} Storage
  * @typedef {{ to: string, kind: "code" | "turn", lang: string, code?: string, product?: string, deadline?: number, link?: string }} Mail
- * @typedef {{ id: string, name: string, names?: Record<string, string> }} Product
+ * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string }} Product
  * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, reported: number }} User
  * @typedef {{ seq: number, uid: string, products: string[], at: number, state: "waiting" | "offered", codeId?: number, deadline?: number, requeued?: boolean, avoid?: string[] }} Entry
  * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad" }} Code
@@ -65,13 +65,17 @@ export class QueueError extends Error {
 export class InviteQueue {
   /**
    * @param {{ storage: Storage, products: Product[], publish?: (channel: string, event: string, data: unknown) => Promise<unknown>,
-   *   sendMail?: (m: Mail) => Promise<unknown>, admins?: string[], siteUrl?: string, now?: () => number, random?: (n: number) => string }} o
+   *   sendMail?: (m: Mail) => Promise<unknown>, admins?: string[], siteUrl?: string, now?: () => number, random?: (n: number) => string,
+   *   verifyHuman?: (token: string, ip: string) => Promise<boolean> }} o
+   *   verifyHuman, when given, checks the bot challenge (e.g. Cloudflare Turnstile) that the page
+   *   sends as body.human before an email code goes out.
    */
   constructor(o) {
     this.storage = o.storage;
     this.products = o.products.filter((p) => p && /^[a-z0-9-]{1,40}$/.test(p.id) && p.name);
     this.publish = o.publish ?? (async () => {});
     this.sendMail = o.sendMail ?? (async () => {});
+    this.verifyHuman = o.verifyHuman ?? null;
     this.admins = new Set((o.admins ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean));
     this.siteUrl = o.siteUrl ?? "";
     this.now = o.now ?? Date.now;
@@ -290,6 +294,7 @@ export class InviteQueue {
         id: p.id,
         name: p.name,
         names: p.names ?? {},
+        icon: iconOf(p),
         open: [...this.codes.values()].filter((c) => c.product === p.id && c.state === "open").length,
         waiting: waiting.filter((e) => e.state === "waiting" && e.products.includes(p.id)).length,
       })),
@@ -390,6 +395,10 @@ const ROUTES = {
     const sent = (prev?.sent ?? []).filter((t) => now - t < 3_600_000);
     if (sent.length && now - sent[sent.length - 1] < OTP_RESEND_MS) throw new QueueError(429, "wait");
     if (sent.length >= OTP_PER_EMAIL_HOUR || byIp.length >= OTP_PER_IP_HOUR) throw new QueueError(429, "too_many");
+    if (this.verifyHuman) {
+      const token = String(body.human ?? "").slice(0, 2048);
+      if (!token || !(await this.verifyHuman(token, ip).catch(() => false))) throw new QueueError(403, "human");
+    }
     const code = String(randomInt(1_000_000)).padStart(6, "0");
     const otp = { hash: await sha256(`${email}:${code}`), exp: now + OTP_TTL_MS, tries: 0, sent: [...sent, now] };
     this.otps.set(email, otp);
@@ -737,4 +746,17 @@ export class MemoryStorage {
   async list({ prefix }) {
     return new Map([...this.data].filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k, structuredClone(v)]));
   }
+}
+
+/**
+ * A product's icon as the page may show it: a file the page ships
+ * (public/products/<name>.svg or .png) or an https URL. Anything else is
+ * left out.
+ * @param {Product} p
+ */
+function iconOf(p) {
+  const icon = typeof p.icon === "string" ? p.icon : "";
+  if (/^[a-z0-9-]{1,40}\.(svg|png)$/.test(icon)) return icon;
+  if (/^https:\/\/[^\s"'<>()\\]{1,300}$/.test(icon)) return icon;
+  return "";
 }

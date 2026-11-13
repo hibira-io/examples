@@ -7,12 +7,12 @@ import { configured, hibira } from './hibira';
 // lib/invite-queue.js in a Durable Object and sends real email.
 
 const PRODUCTS = [
-  { id: 'app-beta', name: 'App beta invite' },
-  { id: 'game-playtest', name: 'Game playtest key' },
-  { id: 'testflight', name: 'TestFlight spot' },
+  { id: 'app-beta', name: 'App beta invite', icon: 'beta.svg' },
+  { id: 'game-playtest', name: 'Game playtest key', icon: 'game.svg' },
+  { id: 'testflight', name: 'TestFlight spot', icon: 'phone.svg' },
 ];
 
-function products(): { id: string; name: string }[] {
+function products(): { id: string; name: string; icon?: string }[] {
   try {
     const list = JSON.parse(process.env.INVITE_PRODUCTS || 'null');
     if (Array.isArray(list) && list.length) return list;
@@ -36,6 +36,8 @@ export function queue(): InviteQueue {
         if (m.kind === 'code') console.log(`\n[invite-queue] email code for ${m.to}: ${m.code}\n`);
         else console.log(`\n[invite-queue] ${m.to}: your turn for ${m.product}\n`);
       },
+      // With Turnstile keys set, an email code needs Cloudflare's bot check.
+      verifyHuman: process.env.TURNSTILE_SECRET_KEY ? verifyTurnstile : undefined,
     });
     // Offers that run out move on even when nobody calls the API.
     g.inviteTimer ??= setInterval(() => g.inviteQueue?.tick().catch(console.error), 30_000);
@@ -46,4 +48,12 @@ export function queue(): InviteQueue {
 export function bearer(request: Request): string {
   const h = request.headers.get('authorization') ?? '';
   return h.startsWith('Bearer ') ? h.slice(7) : '';
+}
+
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  const form = new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY ?? '', response: token });
+  if (ip) form.set('remoteip', ip);
+  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean };
+  return data.success === true;
 }

@@ -7,6 +7,7 @@ const demo = Boolean(process.env.NEXT_PUBLIC_DEMO_API);
 
 const nextConfig: NextConfig = demo
   ? {
+      env: { NEXT_PUBLIC_BASE_PATH: process.env.DEMO_BASE_PATH || '' },
       output: 'export',
       basePath: process.env.DEMO_BASE_PATH || undefined,
       pageExtensions: ['demo.tsx', 'demo.ts'],
