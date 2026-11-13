@@ -268,15 +268,35 @@ export default function QueueView({
         </ul>
       </header>
 
-      <nav className="tabs">
-        <Link href="/" className={'tab' + (view === 'get' ? ' tab-on' : '')} aria-current={view === 'get' ? 'page' : undefined}>
-          {t.lineTitle}
-          {view !== 'get' && me?.entry?.state === 'offered' && <span className="tab-alert" aria-hidden="true" />}
-        </Link>
-        <Link href="/give" className={'tab' + (view === 'give' ? ' tab-on' : '')} aria-current={view === 'give' ? 'page' : undefined}>
-          {t.giveTitle}
-        </Link>
-      </nav>
+      {view === 'home' ? (
+        <nav className="choose">
+          <Link href="/give" className="choose-button choose-give" onClick={() => track('choose', { path: 'give' })}>
+            <ChooseIcon kind="give" />
+            <span className="choose-text">
+              <strong>{t.chooseGive}</strong>
+              <span>{t.chooseGiveHint}</span>
+            </span>
+          </Link>
+          <Link href="/get" className="choose-button choose-get" onClick={() => track('choose', { path: 'get' })}>
+            <ChooseIcon kind="get" />
+            <span className="choose-text">
+              <strong>{t.chooseGet}</strong>
+              <span>{t.chooseGetHint}</span>
+            </span>
+            {me?.entry?.state === 'offered' && <span className="choose-alert">{t.chooseTurn}</span>}
+          </Link>
+        </nav>
+      ) : (
+        <nav className="tabs">
+          <Link href="/get" className={'tab' + (view === 'get' ? ' tab-on' : '')} aria-current={view === 'get' ? 'page' : undefined}>
+            {t.lineTitle}
+            {view !== 'get' && me?.entry?.state === 'offered' && <span className="tab-alert" aria-hidden="true" />}
+          </Link>
+          <Link href="/give" className={'tab' + (view === 'give' ? ' tab-on' : '')} aria-current={view === 'give' ? 'page' : undefined}>
+            {t.giveTitle}
+          </Link>
+        </nav>
+      )}
 
       {error && (
         <p className="error" role="alert">
@@ -306,7 +326,9 @@ export default function QueueView({
             </ul>
           </section>
 
-          {!me ? (
+          {view === 'home' ? (
+            me && <Account me={me} call={call} onSignOut={signOut} />
+          ) : !me ? (
             <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
           ) : (
             <>
@@ -849,4 +871,24 @@ function useTurnstile(siteKey: string, lang: string) {
   return { ref, token, reset, on: Boolean(siteKey) };
 }
 
-export type View = 'get' | 'give';
+export type View = 'home' | 'get' | 'give';
+
+// The two doors on the first page: a gift for giving, a ticket for getting.
+function ChooseIcon({ kind }: { kind: 'give' | 'get' }) {
+  return (
+    <svg className="choose-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {kind === 'give' ? (
+        <>
+          <rect x="3.5" y="9" width="17" height="11.5" rx="1.8" />
+          <path d="M2.5 9h19M12 9v11.5M12 9C10 5 7 4.6 7.2 7.2 7.3 8.6 9.5 9 12 9zM12 9c2-4 5-4.4 4.8-1.8C16.7 8.6 14.5 9 12 9z" />
+        </>
+      ) : (
+        <>
+          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v2a2 2 0 0 0 0 4v2a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 16v-2a2 2 0 0 0 0-4V8A1.5 1.5 0 0 1 4 6.5z" />
+          <path d="M15.5 7v10" strokeDasharray="1.2 2.4" />
+          <path d="M7 12h5M10 9.5 12.5 12 10 14.5" />
+        </>
+      )}
+    </svg>
+  );
+}

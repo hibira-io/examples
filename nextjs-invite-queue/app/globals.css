@@ -717,3 +717,102 @@ input[type='checkbox'] {
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
   font-size: 0.9rem;
 }
+
+/* The first page: two big doors, give and get. */
+.choose {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 0 0 20px;
+}
+.choose-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 120px;
+  padding: 22px 24px;
+  border-radius: 18px;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.choose-button:hover {
+  transform: translateY(-2px);
+}
+.choose-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.choose-give {
+  color: var(--accent);
+  background: var(--card);
+  border: 2px solid var(--accent);
+  box-shadow: 0 10px 24px -16px rgba(229, 72, 77, 0.6);
+}
+.choose-get {
+  color: #fff;
+  background: linear-gradient(135deg, #f0565b 0%, #d63a41 55%, #b02c37 100%);
+  border: 2px solid transparent;
+  box-shadow: 0 14px 30px -14px rgba(214, 58, 65, 0.75);
+}
+.choose-icon {
+  flex: none;
+}
+.choose-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.choose-text strong {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.choose-text span {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+.choose-give .choose-text span {
+  color: var(--muted);
+  opacity: 1;
+}
+.choose-alert {
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: #fff;
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.35);
+}
+@media (max-width: 640px) {
+  .choose {
+    grid-template-columns: 1fr;
+  }
+  /* Keep both doors in the first screen on a phone. */
+  .hero {
+    padding: 18px 18px 16px;
+  }
+  .hero-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+  .hero-lead {
+    font-size: 0.92rem;
+    margin-bottom: 12px;
+  }
+  .hero-icons {
+    display: none;
+  }
+  .choose-button {
+    min-height: 96px;
+    padding: 18px 20px;
+  }
+  .choose-text strong {
+    font-size: 1.3rem;
+  }
+}
