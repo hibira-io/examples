@@ -41,10 +41,13 @@ type Me = {
   blocked: boolean;
   newGiver?: boolean;
   cooldownUntil: number;
-  entry: null | { state: 'waiting' | 'offered'; products: string[]; ahead: number; offer: null | { product: string; deadline: number } };
+  cooldowns?: Record<string, number>;
+  entry: null | Place;
+  entries?: Place[];
   taken: Taken[];
   given: Given[];
 };
+type Place = { product?: string; state: 'waiting' | 'offered'; products: string[]; ahead: number; offer: null | { product: string; deadline: number } };
 type State = { products: Product[]; waiting: number; served: number; holdHours: number; chat: Message[]; me: Me | null };
 
 const TOKEN = 'invite-queue-token';
@@ -554,102 +557,114 @@ function Account({ me, call, onSignOut }: { me: Me; call: Call; onSignOut: () =>
 
 function Line({ me, products, call, name, lang }: { me: Me; products: Product[]; call: Call; name: (id: string) => string; lang: string }) {
   const t = useT();
-  const [pick, setPick] = useState<string[]>(me.entry?.products ?? []);
+  const places = me.entries ?? (me.entry ? [me.entry] : []);
+  const placeOf = (p: Place) => p.product ?? p.products[0];
+  const cooldowns = me.cooldowns ?? {};
+  const [pick, setPick] = useState('');
   const [ask, setAsk] = useState(false);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const chosen = chosenProduct(products);
-    const base = me.entry?.products ?? (products.length === 1 ? [products[0].id] : []);
-    setPick(chosen && !base.includes(chosen) ? [...base, chosen] : base);
-  }, [me.entry?.products, products]);
+    setPick((p) => p || chosen || products[0]?.id || '');
+  }, [products]);
+  const offers = places.filter((p) => p.offer);
   useEffect(() => {
-    if (!me.entry?.offer) return;
+    if (!offers.length) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [me.entry?.offer]);
+  }, [offers.length]);
   const fmt = (at: number, withDate = false) =>
     new Intl.DateTimeFormat(lang, withDate ? { dateStyle: 'medium', timeStyle: 'short' } : { timeStyle: 'short' }).format(new Date(at));
 
-  const offer = me.entry?.offer;
-  if (offer) {
-    const left = Math.max(0, offer.deadline - now);
-    const h = Math.floor(left / 3_600_000);
-    const m = Math.floor((left % 3_600_000) / 60_000);
-    const s = Math.floor((left % 60_000) / 1000);
-    return (
-      <section className="card turn" aria-live="assertive">
-        <h2>{t.turnTitle(name(offer.product))}</h2>
-        <p className="countdown">
-          {h}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
-        </p>
-        <p className="small">{t.turnHint(fmt(offer.deadline))}</p>
-        <p className="actions">
-          <button className="primary" onClick={() => call('/offer/take')}>
-            {t.take}
-          </button>
-          <button className="secondary" onClick={() => call('/offer/pass')}>
-            {t.pass}
-          </button>
-        </p>
-      </section>
-    );
-  }
-
-  const toggle = (id: string) => setPick((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const join = async () => {
     if (ask && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission().catch(() => {});
-    const joined = await call('/queue/join', { products: pick });
-    if (joined) track('join_queue', { products: pick.join(',') });
+    const joined = await call('/queue/join', { product: pick });
+    if (joined) track('join_queue', { products: pick });
   };
-  const same = me.entry && pick.length === me.entry.products.length && pick.every((p) => me.entry!.products.includes(p));
+  const waitUntil = cooldowns[pick] ?? 0;
 
   return (
-    <section className="card">
-      <h2>{t.lineTitle}</h2>
-      {me.entry && (
-        <p className="position" aria-live="polite">
-          <strong>{t.ahead(me.entry.ahead)}</strong>
-          <span className="small muted">{t.waitingHint}</span>
-        </p>
-      )}
-      {me.cooldownUntil > 0 && !me.entry ? (
-        <p className="small">{t.cooldown(fmt(me.cooldownUntil, true))}</p>
-      ) : (
-        <>
-          <fieldset className="choices">
-            <legend className="small muted">{t.pickProducts}</legend>
-            {products.map((p) => (
-              <label key={p.id} className="choice">
-                <input type="checkbox" checked={pick.includes(p.id)} onChange={() => toggle(p.id)} />
-                <ProductName product={p} name={name} />
-              </label>
-            ))}
-          </fieldset>
-          {!me.entry && (
-            <label className="choice small">
-              <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)} />
-              <span>{t.notifyAsk}</span>
-            </label>
-          )}
-          <p className="actions">
-            {!me.entry ? (
-              <button className="primary" disabled={!pick.length} onClick={join}>
-                {t.join}
+    <>
+      {offers.map((p) => {
+        const offer = p.offer!;
+        const left = Math.max(0, offer.deadline - now);
+        const h = Math.floor(left / 3_600_000);
+        const m = Math.floor((left % 3_600_000) / 60_000);
+        const sec = Math.floor((left % 60_000) / 1000);
+        return (
+          <section key={offer.product} className="card turn" aria-live="assertive">
+            <h2>{t.turnTitle(name(offer.product))}</h2>
+            <p className="countdown">
+              {h}:{String(m).padStart(2, '0')}:{String(sec).padStart(2, '0')}
+            </p>
+            <p className="small">{t.turnHint(fmt(offer.deadline))}</p>
+            <p className="actions">
+              <button className="primary" onClick={() => call('/offer/take', { product: offer.product })}>
+                {t.take}
               </button>
-            ) : (
-              <>
-                <button className="primary" disabled={!pick.length || Boolean(same)} onClick={join}>
-                  {t.update}
-                </button>
-                <button className="secondary" onClick={() => call('/queue/leave')}>
-                  {t.leave}
-                </button>
-              </>
-            )}
-          </p>
-        </>
+              <button className="secondary" onClick={() => call('/offer/pass', { product: offer.product })}>
+                {t.pass}
+              </button>
+            </p>
+          </section>
+        );
+      })}
+      {!offers.length && (
+        <section className="card">
+          <h2>{t.lineTitle}</h2>
+          {places.length ? (
+            <>
+              <p className="small muted">{t.myLines}</p>
+              <ul className="my-lines">
+                {places.map((p) => {
+                  const id = placeOf(p);
+                  const product = products.find((x) => x.id === id);
+                  return (
+                    <li key={id}>
+                      {product ? <ProductName product={product} name={name} /> : <span>{name(id)}</span>}
+                      <strong className="small">{t.ahead(p.ahead)}</strong>
+                      <button className="secondary" onClick={() => call('/queue/leave', { product: id })}>
+                        {t.leave}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="small muted">{t.oneLine(name(placeOf(places[0])))}</p>
+              <p className="small muted">{t.waitingHint}</p>
+            </>
+          ) : (
+            <div className="stack">
+              <label>
+                <span className="small muted">{t.pickProducts}</span>
+                <select value={pick} onChange={(e) => setPick(e.target.value)}>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {name(p.id)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {waitUntil > 0 ? (
+                <p className="small">{t.cooldown(fmt(waitUntil, true))}</p>
+              ) : (
+                <>
+                  <label className="choice small">
+                    <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)} />
+                    <span>{t.notifyAsk}</span>
+                  </label>
+                  <p className="actions">
+                    <button className="primary" disabled={!pick} onClick={join}>
+                      {t.join}
+                    </button>
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </section>
       )}
-    </section>
+    </>
   );
 }
 
