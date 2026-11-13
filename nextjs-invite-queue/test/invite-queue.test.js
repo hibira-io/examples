@@ -234,6 +234,20 @@ test("a code several people can use goes to each of them once", async () => {
   assert.equal((await call("GET", "/state", undefined, people[0])).body.me.entry.state, "waiting");
 });
 
+test("a giver says how many uses are left, up to the product's", async () => {
+  const { call, signIn } = setup();
+  const a = await signIn("a@example.com");
+  assert.equal((await call("POST", "/codes", { product: "pass", codes: ["PASS-LEFT-2"], uses: 2 }, a)).status, 200);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").open, 2);
+  assert.equal((await call("GET", "/state", undefined, a)).body.me.given[0].uses, 2);
+  const b = await signIn("b@example.com");
+  assert.equal((await call("POST", "/codes", { product: "pass", codes: ["PASS-LEFT-9"], uses: 9 }, b)).status, 200);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").open, 5);
+  const c = await signIn("c@example.com");
+  assert.equal((await call("POST", "/codes", { product: "pass", codes: ["PASS-LEFT-X"], uses: "x" }, c)).status, 200);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").open, 8);
+});
+
 test("a giver takes back the places nobody has yet", async () => {
   const { call, signIn } = setup();
   const giver = await signIn("giver@example.com");

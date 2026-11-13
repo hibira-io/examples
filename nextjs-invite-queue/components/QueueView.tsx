@@ -666,6 +666,9 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
   const [product, setProduct] = useState(products[0]?.id ?? '');
   const [text, setText] = useState('');
   const [thanks, setThanks] = useState('');
+  const max = products.find((p) => p.id === product)?.uses ?? 1;
+  const [left, setLeft] = useState(max);
+  useEffect(() => setLeft(max), [max]);
   const STATE = { open: t.stateOpen, offered: t.stateOffered, taken: t.stateTaken };
 
   const give = async (e: React.FormEvent) => {
@@ -674,7 +677,7 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
       .split('\n')
       .map((s) => s.trim())
       .filter(Boolean);
-    const res = await call('/codes', { product, codes });
+    const res = await call('/codes', { product, codes, uses: Math.min(left, max) });
     if (res) track('give_codes', { product, count: codes.length });
     if (res) {
       setText('');
@@ -704,10 +707,19 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
             const hosts = products.find((p) => p.id === product)?.hosts ?? [];
             return hosts.length > 0 && <p className="small muted">{t.giveHosts(hosts.join(', '))}</p>;
           })()}
-          {(() => {
-            const uses = products.find((p) => p.id === product)?.uses ?? 1;
-            return uses > 1 && <p className="small muted">{t.giveUses(uses)}</p>;
-          })()}
+          {max > 1 && (
+            <label>
+              <span className="small muted">{t.giveLeft(max)}</span>
+              <select value={left} onChange={(e) => setLeft(Number(e.target.value))}>
+                {Array.from({ length: max }, (_, i) => max - i).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span className="small muted">{t.giveUses(left)}</span>
+            </label>
+          )}
           {me.newGiver && <p className="small muted">{t.giveNewGiver}</p>}
           <label>
             <span className="small muted">{t.giveCodes}</span>
