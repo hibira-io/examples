@@ -7,7 +7,7 @@ for the products they want on the get page (`/get`). Each code goes to the next 
 6 hours to take it before it moves on. A chat room sits beside the line,
 and everyone sees the line, the counts and the people online change live.
 
-Live: [demos.hibira.io/examples/invite-queue](https://demos.hibira.io/examples/invite-queue/)
+Live: [hibira.io/tools/invite-queue](https://hibira.io/tools/invite-queue/)
 
 ![Screenshot](screenshot.png)
 

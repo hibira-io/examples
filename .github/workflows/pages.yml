@@ -39,19 +39,25 @@ jobs:
           mkdir -p site
           cp -r pages/. site/
           for app in nextjs-lobby nextjs-dashboard nextjs-spaces nextjs-games nextjs-handoff nextjs-sql-approvals nextjs-auction; do
-            (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npx next build)
+            (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npm run build)
             cp -r "$app/out" "site/$app"
           done
-          # The invite code queue is shared as a link, so it gets a short path.
-          # A second build with basePath /tools/invite-queue is what hibira.io
-          # serves at hibira.io/tools/invite-queue/ (hibira-io/examples-infra
-          # demo-api tools-page.js); both name that as canonical and send
-          # Google Analytics to hibira.io's property.
+          # The invite code queue lives at hibira.io/tools/invite-queue/, which
+          # hibira.io serves from this build (hibira-io/examples-infra demo-api
+          # tools-page.js), with Google Analytics on hibira.io's property.
           (cd nextjs-invite-queue && npm ci --no-audit --no-fund \
-            && NEXT_PUBLIC_GA_ID=G-YSHF64WNZ6 DEMO_BASE_PATH=/examples/invite-queue npx next build \
-            && cp -r out ../site/invite-queue && rm -rf out .next \
-            && NEXT_PUBLIC_GA_ID=G-YSHF64WNZ6 DEMO_BASE_PATH=/tools/invite-queue npx next build \
+            && NEXT_PUBLIC_GA_ID=G-YSHF64WNZ6 DEMO_BASE_PATH=/tools/invite-queue npm run build \
             && mkdir -p ../site/tools && cp -r out ../site/tools/invite-queue)
+          # Its earlier address here sends every page, query and hash on to
+          # hibira.io (GitHub Pages has no 301: an instant refresh with the
+          # canonical, which search engines take as a permanent move), and
+          # its service worker removes itself from installed copies.
+          for p in "" give/ get/ vendor/; do
+            mkdir -p "site/invite-queue/$p"
+            u="https://hibira.io/tools/invite-queue/$p"
+            printf '<!doctype html><meta charset="utf-8"><title>Invite code queue</title><link rel="canonical" href="%s"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0; url=%s"><script>location.replace("%s"+location.search+location.hash)</script><a href="%s">%s</a>\n' "$u" "$u" "$u" "$u" "$u" > "site/invite-queue/${p}index.html"
+          done
+          printf 'self.addEventListener("install",()=>self.skipWaiting());self.addEventListener("activate",e=>e.waitUntil(self.registration.unregister().then(()=>self.clients.matchAll()).then(cs=>cs.forEach(c=>c.navigate(c.url)))));\n' > site/invite-queue/sw.js
           (cd phaser-lobby && npm ci --no-audit --no-fund && VITE_DEMO_API="$NEXT_PUBLIC_DEMO_API" DEMO_BASE_PATH=/examples/phaser-lobby npx vite build)
           cp -r phaser-lobby/dist site/phaser-lobby
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

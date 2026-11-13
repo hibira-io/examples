@@ -8,8 +8,8 @@ import Pwa from '@/components/Pwa';
 import Faq from '@/components/Faq';
 import { FAQ } from '@/lib/faq';
 
-// The hosted copies: demos.hibira.io/examples/invite-queue/ and the one
-// hibira.io serves at /tools/invite-queue/ (DEMO_BASE_PATH picks which).
+// The hosted copy is the one hibira.io serves at /tools/invite-queue/
+// (DEMO_BASE_PATH); another base path is named on demos.hibira.io.
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const SITE = BASE.startsWith('/tools/') ? `https://hibira.io${BASE}/` : BASE ? `https://demos.hibira.io${BASE}/` : undefined;
 const TITLE = '排隊領邀請碼 · Invite code queue';
