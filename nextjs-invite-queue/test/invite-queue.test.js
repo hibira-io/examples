@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CHANNEL, CLAIM_COOLDOWN_MS, HOLD_MS, InviteQueue, MemoryStorage, NEW_DONOR_MAX_OPEN, STRIKES_BLOCK, USER_CHANNEL_PREFIX } from "../lib/invite-queue.js";
+import { createHmac } from "node:crypto";
+import { CHANNEL, CLAIM_COOLDOWN_MS, DNS_PREFIX, HOLD_MS, InviteQueue, MemoryStorage, NEW_DONOR_MAX_OPEN, STRIKES_BLOCK, USER_CHANNEL_PREFIX, VENDOR_PRODUCTS_MAX } from "../lib/invite-queue.js";
 
 const PRODUCTS = [
   { id: "alpha", name: "Alpha beta" },
@@ -8,9 +9,10 @@ const PRODUCTS = [
   { id: "cursor", name: "Cursor", hosts: ["cursor.com"] },
 ];
 
-function setup({ storage = new MemoryStorage(), clock = { t: 1_800_000_000_000 } } = {}) {
+function setup({ storage = new MemoryStorage(), clock = { t: 1_800_000_000_000 }, txt = {} } = {}) {
   const mails = [];
   const events = [];
+  const hooks = [];
   const q = new InviteQueue({
     storage,
     products: PRODUCTS,
@@ -19,6 +21,11 @@ function setup({ storage = new MemoryStorage(), clock = { t: 1_800_000_000_000 }
     now: () => clock.t,
     publish: async (channel, event, data) => events.push({ channel, event, data }),
     sendMail: async (m) => mails.push(m),
+    fetch: async (url, init) => {
+      hooks.push({ url, headers: init.headers, body: init.body });
+      return { status: 204 };
+    },
+    resolveTxt: async (name) => txt[name] ?? [],
   });
   const call = (method, path, body, token, ip = "1.1.1.1") => q.handle({ method, path, body, token, ip });
   async function signIn(email, ip) {
@@ -29,7 +36,7 @@ function setup({ storage = new MemoryStorage(), clock = { t: 1_800_000_000_000 }
     assert.equal(res.status, 200, JSON.stringify(res.body));
     return res.body.token;
   }
-  return { q, call, signIn, mails, events, clock, storage };
+  return { q, call, signIn, mails, events, hooks, clock, storage, txt };
 }
 
 test("joining needs an email code", async () => {
@@ -275,4 +282,137 @@ test("product icons pass only as a shipped file name or an https URL", async () 
   });
   await q.load();
   assert.deepEqual(q.counts().products.map((p) => p.icon), ["claude-code.png", "https://cdn.example/b.svg", "", ""]);
+});
+
+test("vendors: a company email verifies its domain; free mail needs DNS", async () => {
+  const { call, signIn, txt, clock } = setup();
+  const acme = await signIn("ops@acme.dev");
+  assert.equal((await call("GET", "/vendor", undefined, acme)).body.vendor, null);
+  const started = await call("POST", "/vendor/start", {}, acme);
+  assert.deepEqual(started.body.vendor.verifiedDomains, ["acme.dev"]);
+  // A product's sites must all be on verified domains.
+  assert.equal((await call("POST", "/vendor/products", { name: "Acme", hosts: ["acme.dev", "evil.example"] }, acme)).body.error, "domain_unverified");
+  const listed = await call("POST", "/vendor/products", { name: "Acme AI", hosts: ["https://app.acme.dev/join"], kind: "referral", names: { "zh-TW": "Acme 推薦碼" } }, acme);
+  assert.equal(listed.status, 200, JSON.stringify(listed.body));
+  assert.equal(listed.body.product, "acme-ai");
+  const state = (await call("GET", "/state")).body;
+  const p = state.products.find((x) => x.id === "acme-ai");
+  assert.deepEqual([p.official, p.kind, p.hosts, p.names["zh-TW"]], [true, "referral", ["app.acme.dev"], "Acme 推薦碼"]);
+
+  const solo = await signIn("founder@gmail.com");
+  const v = (await call("POST", "/vendor/start", {}, solo)).body.vendor;
+  assert.deepEqual(v.verifiedDomains, []);
+  assert.equal((await call("POST", "/vendor/products", { name: "Solo", hosts: ["solo.app"] }, solo)).body.error, "domain_unverified");
+  assert.equal((await call("POST", "/vendor/dns", { domain: "gmail.com" }, solo)).body.error, "domain");
+  const asked = await call("POST", "/vendor/dns", { domain: "solo.app" }, solo);
+  const record = asked.body.vendor.domains.find((d) => d.domain === "solo.app").record;
+  assert.equal(record.name, DNS_PREFIX + "solo.app");
+  assert.equal((await call("POST", "/vendor/dns", { domain: "solo.app" }, solo)).body.verified, false);
+  txt[record.name] = ["v=other", record.value];
+  assert.equal((await call("POST", "/vendor/dns", { domain: "solo.app" }, solo)).body.error, "wait");
+  clock.t += 11_000;
+  assert.equal((await call("POST", "/vendor/dns", { domain: "solo.app" }, solo)).body.verified, true);
+  assert.equal((await call("POST", "/vendor/products", { name: "Solo", hosts: ["solo.app"] }, solo)).status, 200);
+  // Someone else cannot take the name.
+  assert.equal((await call("POST", "/vendor/products", { name: "Solo", hosts: ["acme.dev"] }, acme)).body.error, "taken_id");
+});
+
+test("vendors: take over a listed product on their domain, put codes in with an API key", async () => {
+  const { call, signIn, hooks, q } = setup();
+  const vendor = await signIn("team@cursor.com");
+  await call("POST", "/vendor/start", {}, vendor);
+  assert.equal((await call("POST", "/vendor/products", { id: "alpha" }, vendor)).body.error, "domain_unverified");
+  const claimed = await call("POST", "/vendor/products", { id: "cursor" }, vendor);
+  assert.equal(claimed.body.vendor.products[0].claimed, true);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "cursor").official, true);
+  // Another company cannot take it too.
+  const other = await signIn("x@cursor.com");
+  await call("POST", "/vendor/start", {}, other);
+  assert.equal((await call("POST", "/vendor/products", { id: "cursor" }, other)).body.error, "claimed");
+
+  const { key } = (await call("POST", "/vendor/key", {}, vendor)).body;
+  assert.match(key, /^vk_/);
+  assert.equal((await call("POST", "/vendor/key", {}, key)).status, 401);
+  assert.equal((await call("POST", "/vendor/codes", { product: "cursor", codes: ["https://evil.example/x"] }, key)).body.error, "host");
+  assert.equal((await call("POST", "/vendor/codes", { product: "alpha", codes: ["CODE-1234"] }, key)).body.error, "products");
+  const codes = Array.from({ length: 20 }, (_, i) => `https://cursor.com/referral?code=${1000 + i}`);
+  const added = await call("POST", "/vendor/codes", { product: "cursor", codes: codes.join("\n") }, key);
+  assert.deepEqual([added.status, added.body.added], [200, 20]);
+  assert.equal((await call("POST", "/vendor/codes", { product: "cursor", codes }, key)).body.duplicates, 20);
+  assert.equal((await call("GET", "/vendor", undefined, key)).body.vendor.products[0].stats.open, 20);
+  assert.equal((await call("GET", "/vendor", undefined, "vk_nope_" + "a".repeat(32))).status, 401);
+
+  // Webhooks are https on a public name.
+  for (const url of ["http://hooks.example.com/x", "https://localhost/x", "https://10.0.0.1/x", "https://user:pw@hooks.example.com/"]) {
+    assert.equal((await call("POST", "/vendor/webhook", { url }, key)).body.error, "url", url);
+  }
+  const { secret } = (await call("POST", "/vendor/webhook", { url: "https://hooks.example.com/invites" }, key)).body;
+  assert.match(secret, /^whsec_/);
+
+  const taker = await signIn("t@example.com");
+  await call("POST", "/queue/join", { products: ["cursor"] }, taker);
+  const took = await call("POST", "/offer/take", {}, taker);
+  assert.equal(took.status, 200);
+  const hook = hooks.at(-1);
+  assert.equal(hook.url, "https://hooks.example.com/invites");
+  const event = JSON.parse(hook.body);
+  assert.equal(event.type, "code.taken");
+  assert.equal(event.data.value, took.body.code.value);
+  const [, t, v1] = hook.headers["hibira-signature"].match(/^t=(\d+),v1=([0-9a-f]{64})$/);
+  assert.equal(v1, createHmac("sha256", secret).update(`${t}.${hook.body}`).digest("hex"));
+
+  // A bad report goes to the vendor, does not keep the taker away from the
+  // vendor's other codes, and gives no strikes to anyone.
+  await call("POST", "/taken/report", { id: took.body.code.id, works: false }, taker);
+  assert.equal(JSON.parse(hooks.at(-1).body).type, "code.reported");
+  assert.equal(JSON.parse(hooks.at(-1).body).data.works, false);
+  const me = (await call("GET", "/state", undefined, taker)).body.me;
+  assert.equal(me.entry.state, "offered");
+
+  // Withdrawing and leaving: open codes go, the product goes back to the list.
+  const back = await call("POST", "/vendor/codes/withdraw", { product: "cursor" }, key);
+  assert.equal(back.body.removed, 18);
+  await call("POST", "/vendor/products/remove", { id: "cursor" }, key);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "cursor").official, false);
+  assert.ok(q.products.some((p) => p.id === "cursor"));
+});
+
+test("vendors: codes running out, limits, and a moderator turning one off", async () => {
+  const { call, signIn, hooks } = setup();
+  const vendor = await signIn("a@acme.dev");
+  await call("POST", "/vendor/start", {}, vendor);
+  for (let i = 0; i < VENDOR_PRODUCTS_MAX; i++) assert.equal((await call("POST", "/vendor/products", { name: `Acme ${i}`, hosts: ["acme.dev"] }, vendor)).status, 200);
+  assert.equal((await call("POST", "/vendor/products", { name: "One more", hosts: ["acme.dev"] }, vendor)).body.error, "too_many");
+  await call("POST", "/vendor/webhook", { url: "https://hooks.acme.dev/x" }, vendor);
+  await call("POST", "/vendor/codes", { product: "acme-0", codes: ["ACME-0001"] }, vendor);
+  const a = await signIn("p1@example.com");
+  const b = await signIn("p2@example.com");
+  await call("POST", "/queue/join", { products: ["acme-0"] }, a);
+  await call("POST", "/queue/join", { products: ["acme-0"] }, b);
+  await call("POST", "/offer/take", {}, a);
+  const types = hooks.map((h) => JSON.parse(h.body).type);
+  assert.deepEqual(types.slice(-2), ["code.taken", "codes.empty"]);
+  assert.equal(JSON.parse(hooks.at(-1).body).data.waiting, 1);
+
+  const mod = await signIn("mod@example.com");
+  const id = (await call("GET", "/vendor", undefined, vendor)).body.vendor.id;
+  assert.equal((await call("POST", "/admin/vendor/disable", { id }, b)).body.error, "forbidden");
+  assert.equal((await call("POST", "/admin/vendor/disable", { id }, mod)).status, 200);
+  assert.equal((await call("GET", "/state")).body.products.some((p) => p.id.startsWith("acme-")), false);
+  // b was waiting only for it, so b left the line.
+  assert.equal((await call("GET", "/state", undefined, b)).body.me.entry, null);
+  assert.equal((await call("GET", "/vendor", undefined, vendor)).body.vendor.disabled, true);
+  assert.equal((await call("POST", "/vendor/codes", { product: "acme-1", codes: ["ACME-0002"] }, vendor)).body.error, "vendor_disabled");
+});
+
+test("vendors survive a restart", async () => {
+  const storage = new MemoryStorage();
+  const first = setup({ storage });
+  const vendor = await first.signIn("a@acme.dev");
+  await first.call("POST", "/vendor/start", {}, vendor);
+  await first.call("POST", "/vendor/products", { name: "Acme", hosts: ["acme.dev"] }, vendor);
+  await first.call("POST", "/vendor/products", { id: "cursor" }, vendor).catch(() => {});
+  const second = setup({ storage });
+  const state = (await second.call("GET", "/state")).body;
+  assert.equal(state.products.find((p) => p.id === "acme").official, true);
 });
