@@ -8,21 +8,20 @@ import Pwa from '@/components/Pwa';
 import Faq from '@/components/Faq';
 import { FAQ } from '@/lib/faq';
 
-// The hosted copy is the one hibira.io serves at /tools/invite-queue/
-// (DEMO_BASE_PATH); another base path is named on demos.hibira.io.
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-const SITE = BASE.startsWith('/tools/') ? `https://hibira.io${BASE}/` : BASE ? `https://demos.hibira.io${BASE}/` : undefined;
-const TITLE = '排隊領邀請碼 · Invite code queue';
-const DESCRIPTION =
-  '有多的邀請碼就送人，需要就來排隊：Claude Code、Sora、Lovable、Windsurf、Replit、Kling、Suno、ElevenLabs 等 17 種工具的邀請碼與推薦碼。Give spare invite codes, line up for one and chat while you wait.';
+import { BASE, SITE } from '@/lib/site';
+import { SEO } from '@/lib/seo';
+
+// The pages without their own metadata (/get, /give) are zh-TW, like /;
+// the first page in other languages is /en/, /ja/ and so on (app/[lang]).
+const { title: TITLE, description: DESCRIPTION } = SEO['zh-TW'];
 
 export const metadata: Metadata = {
   title: SITE ? `${TITLE} | Hibira` : 'Invite code queue · Hibira example',
   description: SITE ? DESCRIPTION : 'Give spare invite codes, line up for one, and chat while you wait: a live queue built with Next.js and Hibira.',
   ...(SITE && {
     metadataBase: new URL(SITE),
-    openGraph: { title: TITLE, description: DESCRIPTION, url: SITE, siteName: 'Hibira', type: 'website', images: [{ url: 'og.png', width: 1200, height: 630, alt: TITLE }] },
-    twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['og.png'] },
+    openGraph: { title: TITLE, description: DESCRIPTION, url: SITE, siteName: 'Hibira', type: 'website', images: [{ url: 'og-zh-tw.png', width: 1200, height: 630, alt: TITLE }] },
+    twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['og-zh-tw.png'] },
     // Installable: "Add to Home Screen" opens it full screen, like an app.
     manifest: `${BASE}/manifest.webmanifest`,
     appleWebApp: { capable: true, title: '邀請碼排隊', statusBarStyle: 'default' },

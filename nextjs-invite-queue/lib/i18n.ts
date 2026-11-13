@@ -1,6 +1,7 @@
-// The languages of the demo's interface, the same seven as hibira.io. The
-// first visit follows ?lang= or the browser's languages; the choice in the
-// language menu is remembered in this browser.
+// The languages of the demo's interface, the same seven as hibira.io. A
+// language path (/en/, /ja/…) or ?lang= sets it and is remembered, so /get
+// and /give stay in it; otherwise the choice in the language menu, then the
+// browser's languages.
 
 export const LANGS = ['en', 'zh-TW', 'zh-CN', 'ja', 'ko', 'th', 'vi'] as const;
 export type Lang = (typeof LANGS)[number];
@@ -29,9 +30,18 @@ export function toLang(tag: string | null | undefined): Lang | null {
   return LANGS.find((l) => l === t.split('-')[0]) ?? null;
 }
 
+// The first pages under a language path (app/[lang]); zh-TW is /.
+const PATH_LANGS = ['en', 'zh-cn', 'ja', 'ko', 'th', 'vi'];
+
 export function detectLang(): Lang {
-  const fromURL = toLang(new URLSearchParams(location.search).get('lang'));
-  if (fromURL) return fromURL;
+  const segment = location.pathname.split('/').filter(Boolean).pop() ?? '';
+  const fromURL = toLang(PATH_LANGS.includes(segment) ? segment : new URLSearchParams(location.search).get('lang'));
+  if (fromURL) {
+    try {
+      localStorage.setItem(KEY, fromURL);
+    } catch {}
+    return fromURL;
+  }
   try {
     const saved = toLang(localStorage.getItem(KEY));
     if (saved) return saved;
