@@ -3,6 +3,7 @@ import type { Lang } from './i18n';
 const en = {
   language: 'Language',
   liveDemo: 'Live demo on Hibira',
+  demoTag: 'Live demo',
   source: 'Source code',
   demoUnavailable: 'The demo is not available right now. Please try again later.',
 
@@ -61,6 +62,7 @@ export type Strings = typeof en;
 const zhTW: Strings = {
   language: '語言',
   liveDemo: '在 Hibira 上執行的即時 demo',
+  demoTag: '即時 demo',
   source: '原始碼',
   demoUnavailable: 'demo 暫時無法使用，請稍後再試。',
 
@@ -116,6 +118,7 @@ const zhTW: Strings = {
 const zhCN: Strings = {
   language: '语言',
   liveDemo: '在 Hibira 上运行的实时 demo',
+  demoTag: '实时 demo',
   source: '源代码',
   demoUnavailable: 'demo 暂时无法使用，请稍后再试。',
 
@@ -171,6 +174,7 @@ const zhCN: Strings = {
 const ja: Strings = {
   language: '言語',
   liveDemo: 'Hibira で動くライブデモ',
+  demoTag: 'ライブデモ',
   source: 'ソースコード',
   demoUnavailable: 'デモは現在利用できません。しばらくしてからもう一度お試しください。',
 
@@ -226,6 +230,7 @@ const ja: Strings = {
 const ko: Strings = {
   language: '언어',
   liveDemo: 'Hibira에서 실행되는 라이브 데모',
+  demoTag: '라이브 데모',
   source: '소스 코드',
   demoUnavailable: '지금은 데모를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
 
@@ -281,6 +286,7 @@ const ko: Strings = {
 const th: Strings = {
   language: 'ภาษา',
   liveDemo: 'เดโมสดบน Hibira',
+  demoTag: 'เดโมสด',
   source: 'ซอร์สโค้ด',
   demoUnavailable: 'ขณะนี้ใช้งานเดโมไม่ได้ โปรดลองอีกครั้งภายหลัง',
 
@@ -336,6 +342,7 @@ const th: Strings = {
 const vi: Strings = {
   language: 'Ngôn ngữ',
   liveDemo: 'Demo trực tiếp trên Hibira',
+  demoTag: 'Demo trực tiếp',
   source: 'Mã nguồn',
   demoUnavailable: 'Demo hiện không khả dụng. Vui lòng thử lại sau.',
 

@@ -10,7 +10,7 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const SITE = BASE.startsWith('/tools/') ? `https://hibira.io${BASE}/` : BASE ? `https://demos.hibira.io${BASE}/` : undefined;
 const TITLE = '排隊領邀請碼 · Invite code queue';
 const DESCRIPTION =
-  '有多的邀請碼就送人，需要就來排隊：Claude Code 分享碼、AI 工具、App 搶先體驗、遊戲封測。Give spare invite codes, line up for one and chat while you wait.';
+  '有多的邀請碼就送人，需要就來排隊：Claude Code、Sora、Manus、Perplexity、Cursor、Genspark、Lovable 邀請碼。Give spare invite codes, line up for one and chat while you wait.';
 
 export const metadata: Metadata = {
   title: SITE ? `${TITLE} | Hibira` : 'Invite code queue · Hibira example',
