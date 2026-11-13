@@ -7,9 +7,9 @@ import { configured, hibira } from './hibira';
 // lib/invite-queue.js in a Durable Object and sends real email.
 
 const PRODUCTS = [
-  { id: 'app-beta', name: 'App beta invite', icon: 'beta.svg' },
-  { id: 'game-playtest', name: 'Game playtest key', icon: 'game.svg' },
-  { id: 'testflight', name: 'TestFlight spot', icon: 'phone.svg' },
+  { id: 'claude-code', name: 'Claude Code', icon: 'claude-code.png' },
+  { id: 'cursor', name: 'Cursor', icon: 'cursor.png' },
+  { id: 'lovable', name: 'Lovable', icon: 'lovable.png' },
 ];
 
 function products(): { id: string; name: string; icon?: string }[] {

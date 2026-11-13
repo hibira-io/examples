@@ -5,5 +5,5 @@ import QueuePage from '@/components/QueuePage';
 export const dynamic = 'force-dynamic';
 
 export default function Page() {
-  return <QueuePage view="get" />;
+  return <QueuePage view="home" />;
 }

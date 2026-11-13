@@ -1,8 +1,9 @@
 # Invite code queue with a chat room (Next.js)
 
-One queue for spare invite codes. People who have one give it on the
-*Give codes* page; people who want one sign in with an email code and get in
-line for the products they want on the *Get a code* page. Each code goes to the next person in line who wants it, and they have
+One queue for spare invite codes. The first page has two big buttons, *I want
+to share* and *I want a code*. People who have a code give it on the share
+page (`/give`); people who want one sign in with an email code and get in line
+for the products they want on the get page (`/get`). Each code goes to the next person in line who wants it, and they have
 6 hours to take it before it moves on. A chat room sits beside the line,
 and everyone sees the line, the counts and the people online change live.
 
@@ -60,7 +61,7 @@ that sends the two emails (`kind: "code"` and `kind: "turn"`).
 ## Change it
 
 - **Products:** `INVITE_PRODUCTS` in `.env.local`, as JSON
-  (`[{"id":"app-beta","name":"App beta invite","icon":"beta.svg"}]`; `names`
+  (`[{"id":"cursor","name":"Cursor","icon":"cursor.png"}]`; `names`
   adds a name per language, `icon` is a file in `public/products` or an https
   URL).
 - **Bot check:** set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
