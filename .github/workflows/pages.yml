@@ -42,6 +42,9 @@ jobs:
             (cd "$app" && npm ci --no-audit --no-fund && DEMO_BASE_PATH="/examples/$app" npx next build)
             cp -r "$app/out" "site/$app"
           done
+          # The invite code queue is shared as a link, so it gets a short path.
+          (cd nextjs-invite-queue && npm ci --no-audit --no-fund && DEMO_BASE_PATH=/examples/invite-queue npx next build)
+          cp -r nextjs-invite-queue/out site/invite-queue
           (cd phaser-lobby && npm ci --no-audit --no-fund && VITE_DEMO_API="$NEXT_PUBLIC_DEMO_API" DEMO_BASE_PATH=/examples/phaser-lobby npx vite build)
           cp -r phaser-lobby/dist site/phaser-lobby
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
