@@ -33,6 +33,11 @@ Live: [demos.hibira.io/examples/invite-queue](https://demos.hibira.io/examples/i
   subscription count (`pusher:subscription_count`). Turn on
   *Subscription count* on your app's settings page for it.
 
+- **Installable.** The hosted page has a web app manifest and a small
+  service worker (`public/sw.js`) that keeps the page's shell, so it can be
+  added to the home screen and opens offline; the line and the chat always
+  come from the network.
+
 ## Run it
 
 1. Create a free app on [hibira.io](https://hibira.io/portal) (no card) and

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { useLang, useT } from './I18n';
+import HeroGlobe from './HeroGlobe';
 import Link from 'next/link';
 import { track } from './Analytics';
+import { ASK_URL, askBrand } from './LiveChat';
 import { API, AUTH_URL, BASE_PATH, SIGNUP_URL, SOURCE_URL, iconUrl } from '@/lib/demo';
 import type { ErrorCode } from '@/lib/strings';
 
@@ -241,6 +243,7 @@ export default function QueueView({
   return (
     <main className="queue">
       <header className="hero">
+        <HeroGlobe />
         <div className="hero-top">
           <img className="hero-logo" src={`${BASE_PATH}/brand/invite-queue.svg`} alt="" width={64} height={64} />
           <span className={'status' + (live ? ' status-connected' : '')}>{live ? t.live : t.offline}</span>
@@ -325,6 +328,9 @@ export default function QueueView({
                 </li>
               ))}
             </ul>
+            <a className="ask-brand" href={ASK_URL} onClick={askBrand}>
+              {t.askBrand}
+            </a>
           </section>
 
           {view === 'home' ? (
