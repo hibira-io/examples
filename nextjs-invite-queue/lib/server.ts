@@ -12,7 +12,7 @@ const PRODUCTS = [
   { id: 'lovable', name: 'Lovable', icon: 'lovable.png', hosts: ['lovable.dev'] },
 ];
 
-function products(): { id: string; name: string; icon?: string; hosts?: string[] }[] {
+function products(): { id: string; name: string; icon?: string; hosts?: string[]; kind?: 'invite' | 'referral'; uses?: number }[] {
   try {
     const list = JSON.parse(process.env.INVITE_PRODUCTS || 'null');
     if (Array.isArray(list) && list.length) return list;

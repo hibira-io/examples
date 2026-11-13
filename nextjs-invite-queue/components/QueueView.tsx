@@ -26,12 +26,13 @@ type Product = {
   hosts?: string[];
   kind?: 'invite' | 'referral';
   official?: boolean;
+  uses?: number;
   open: number;
   waiting: number;
 };
 type Message = { id: number; uid: string; name: string; text: string; at: number };
 type Taken = { id: number; product: string; value: string; takenAt: number; report: 'ok' | 'bad' | null; canReport: boolean };
-type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null };
+type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null; uses?: number; taken?: number };
 type Me = {
   uid: string;
   email: string;
@@ -338,6 +339,7 @@ export default function QueueView({
                       {name(p.id)}
                       {p.official && <span className="official">{VENDOR_STRINGS[lang].official}</span>}
                     </span>
+                    <span className="product-card-rule">{t.cardRule(p.uses ?? 1)}</span>
                     <span className="product-card-counts">
                       <span>
                         <strong>{p.open}</strong> {t.colCodes}
@@ -702,6 +704,10 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
             const hosts = products.find((p) => p.id === product)?.hosts ?? [];
             return hosts.length > 0 && <p className="small muted">{t.giveHosts(hosts.join(', '))}</p>;
           })()}
+          {(() => {
+            const uses = products.find((p) => p.id === product)?.uses ?? 1;
+            return uses > 1 && <p className="small muted">{t.giveUses(uses)}</p>;
+          })()}
           {me.newGiver && <p className="small muted">{t.giveNewGiver}</p>}
           <label>
             <span className="small muted">{t.giveCodes}</span>
@@ -723,6 +729,7 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
               <li key={c.id} className="row between small">
                 <span>
                   {name(c.product)} · {STATE[c.state]}
+                  {(c.uses ?? 1) > 1 && ` · ${t.givenTaken(c.taken ?? 0, c.uses ?? 1)}`}
                   {c.report && ` · ${c.report === 'ok' ? t.reportOk : t.reportBad}`}
                 </span>
                 {c.state === 'open' && (

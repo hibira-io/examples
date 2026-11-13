@@ -75,7 +75,8 @@ that sends the two emails (`kind: "code"` and `kind: "turn"`).
 - **Products:** `INVITE_PRODUCTS` in `.env.local`, as JSON
   (`[{"id":"lovable","name":"Lovable","icon":"lovable.png"}]`; `names`
   adds a name per language, `icon` is a file in `public/products` or an https
-  URL).
+  URL, `kind` is `"invite"` or `"referral"`, and `uses` is how many people one
+  code can go to, 1 to 10; each person gets it once).
 - **Bot check:** set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
   `TURNSTILE_SECRET_KEY` from a Cloudflare Turnstile widget, and sending an
   email code needs the check (`verifyHuman` in `InviteQueue`).

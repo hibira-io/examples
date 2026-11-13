@@ -7,6 +7,7 @@ const PRODUCTS = [
   { id: "alpha", name: "Alpha beta" },
   { id: "game", name: "Game playtest" },
   { id: "cursor", name: "Cursor", hosts: ["cursor.com"] },
+  { id: "pass", name: "Guest passes", uses: 3 },
 ];
 
 function setup({ storage = new MemoryStorage(), clock = { t: 1_800_000_000_000 }, txt = {} } = {}) {
@@ -195,6 +196,57 @@ test("a new giver has one code out until one is reported working", async () => {
   assert.equal(me.newGiver, false);
   assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["TWO-0002", "THREE-0003", "FOUR-0004"] }, giver)).status, 200);
   assert.ok(NEW_DONOR_MAX_OPEN < 3);
+});
+
+test("a code several people can use goes to each of them once", async () => {
+  const { call, signIn } = setup();
+  const giver = await signIn("giver@example.com");
+  const people = [];
+  for (let i = 0; i < 4; i++) people.push(await signIn(`p${i}@example.com`));
+  // Counts as one code for a new giver, but fills three places.
+  assert.equal((await call("POST", "/codes", { product: "pass", codes: ["https://example.com/pass/abc"] }, giver)).status, 200);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").uses, 3);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").open, 3);
+  let me = (await call("GET", "/state", undefined, giver)).body.me;
+  assert.equal(me.given.length, 1);
+  assert.deepEqual([me.given[0].uses, me.given[0].taken, me.given[0].state], [3, 0, "open"]);
+  // The first person takes one place and cannot be offered another.
+  await call("POST", "/queue/join", { products: ["pass"] }, people[0]);
+  const first = await call("POST", "/offer/take", {}, people[0]);
+  assert.equal(first.body.code.value, "https://example.com/pass/abc");
+  await call("POST", "/queue/join", { products: ["pass"] }, people[1]);
+  await call("POST", "/queue/join", { products: ["pass"] }, people[2]);
+  for (const p of [people[1], people[2]]) assert.equal((await call("GET", "/state", undefined, p)).body.me.entry.state, "offered");
+  await call("POST", "/offer/take", {}, people[1]);
+  me = (await call("GET", "/state", undefined, giver)).body.me;
+  assert.deepEqual([me.given[0].taken, me.given[0].state], [2, "offered"]);
+  // One "did not work" takes the rest off the queue and counts once.
+  await call("POST", "/taken/report", { id: first.body.code.id, works: false }, people[0]);
+  await call("POST", "/offer/take", {}, people[2]);
+  const third = (await call("GET", "/state", undefined, people[2])).body.me.taken[0];
+  await call("POST", "/taken/report", { id: third.id, works: false }, people[2]);
+  me = (await call("GET", "/state", undefined, giver)).body.me;
+  assert.equal(me.strikes, 1);
+  assert.equal(me.given[0].report, "bad");
+  await call("POST", "/queue/join", { products: ["pass"] }, people[3]);
+  assert.equal((await call("GET", "/state", undefined, people[3])).body.me.entry.state, "waiting");
+  // The person who got a bad place is back in line, but not for the same giver's code.
+  assert.equal((await call("GET", "/state", undefined, people[0])).body.me.entry.state, "waiting");
+});
+
+test("a giver takes back the places nobody has yet", async () => {
+  const { call, signIn } = setup();
+  const giver = await signIn("giver@example.com");
+  const taker = await signIn("taker@example.com");
+  await call("POST", "/codes", { product: "pass", codes: ["PASS-0001"] }, giver);
+  await call("POST", "/queue/join", { products: ["pass"] }, taker);
+  await call("POST", "/offer/take", {}, taker);
+  const id = (await call("GET", "/state", undefined, giver)).body.me.given[0].id;
+  assert.equal((await call("POST", "/codes/withdraw", { id }, giver)).status, 200);
+  const me = (await call("GET", "/state", undefined, giver)).body.me;
+  assert.deepEqual([me.given[0].uses, me.given[0].taken, me.given[0].state], [1, 1, "taken"]);
+  assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").open, 0);
+  assert.equal((await call("POST", "/codes/withdraw", { id }, giver)).body.error, "in_use");
 });
 
 test("a product's links must be on its own site", async () => {
