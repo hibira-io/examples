@@ -15,6 +15,13 @@
 //   private-invite-queue-<user id>   "me": something changed for this person, read /state again
 // Codes never travel over a channel: only /state, called with the
 // person's own session, answers the code they took.
+//
+// Vendors (the companies behind the products) can sign up themselves: a
+// person signed in with a company email, or who adds a DNS TXT record, has
+// verified that domain. With it they list their own product (or take over
+// one that is already listed on their domain), put official codes in by the
+// batch from the page or with an API key, and get webhooks when a code is
+// taken or reported (see "Vendors" below).
 
 export const HOLD_MS = 6 * 60 * 60 * 1000;
 export const OTP_TTL_MS = 10 * 60 * 1000;
@@ -39,6 +46,16 @@ const CHAT_GAP_MS = 3000;
 const CHAT_REPORTS_HIDE = 3;
 const NAME_MAX = 24;
 const CLEANUP_MS = 60 * 60 * 1000;
+export const VENDOR_PRODUCTS_MAX = 5;
+export const VENDOR_BATCH_MAX = 1000;
+export const VENDOR_OPEN_MAX = 5000;
+const VENDOR_DNS_GAP_MS = 10_000;
+const WEBHOOK_TIMEOUT_MS = 5000;
+export const DNS_PREFIX = "_hibira-invite-queue.";
+// Mail that anyone can sign up for proves nothing about a company.
+const FREE_MAIL = new Set(
+  "gmail.com googlemail.com outlook.com hotmail.com live.com msn.com yahoo.com yahoo.co.jp ymail.com icloud.com me.com mac.com aol.com gmx.com gmx.net mail.com proton.me protonmail.com pm.me tutanota.com zoho.com yandex.com yandex.ru hey.com fastmail.com qq.com foxmail.com 163.com 126.com yeah.net sina.com naver.com daum.net hanmail.net kakao.com outlook.jp hotmail.co.jp docomo.ne.jp ezweb.ne.jp gmail.co".split(" "),
+);
 
 export const CHANNEL = "invite-queue";
 export const USER_CHANNEL_PREFIX = "private-invite-queue-";
@@ -57,10 +74,11 @@ export class QueueError extends Error {
 /**
  * @typedef {{ get(key: string): Promise<any>, put(key: string, value: any): Promise<void>, delete(keys: string | string[]): Promise<unknown>, list(o: { prefix: string }): Promise<Map<string, any>> }} Storage
  * @typedef {{ to: string, kind: "code" | "turn", lang: string, code?: string, product?: string, deadline?: number, link?: string }} Mail
- * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string, hosts?: string[] }} Product
+ * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string, hosts?: string[], kind?: "invite" | "referral", vendor?: string, hidden?: boolean, at?: number }} Product
+ * @typedef {{ id: string, uid: string, at: number, dns: Record<string, { token: string, verified?: number }>, dnsChecked?: number, keyHash?: string, keyHint?: string, keyAt?: number, webhook?: { url: string, secret: string } | null, disabled?: boolean }} Vendor
  * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, vouched?: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, reported: number }} User
  * @typedef {{ seq: number, uid: string, products: string[], at: number, state: "waiting" | "offered", codeId?: number, deadline?: number, requeued?: boolean, avoid?: string[] }} Entry
- * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad" }} Code
+ * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad", vendor?: string }} Code
  * @typedef {{ id: number, uid: string, name: string, text: string, at: number, reports: string[] }} ChatMessage
  */
 
@@ -68,13 +86,22 @@ export class InviteQueue {
   /**
    * @param {{ storage: Storage, products: Product[], publish?: (channel: string, event: string, data: unknown) => Promise<unknown>,
    *   sendMail?: (m: Mail) => Promise<unknown>, admins?: string[], siteUrl?: string, now?: () => number, random?: (n: number) => string,
-   *   verifyHuman?: (token: string, ip: string) => Promise<boolean> }} o
+   *   verifyHuman?: (token: string, ip: string) => Promise<boolean>, fetch?: typeof fetch,
+   *   resolveTxt?: (name: string) => Promise<string[]> }} o
    *   verifyHuman, when given, checks the bot challenge (e.g. Cloudflare Turnstile) that the page
-   *   sends as body.human before an email code goes out.
+   *   sends as body.human before an email code goes out. fetch sends vendors' webhooks, and
+   *   resolveTxt reads a domain's TXT records (by default both use the global fetch, the latter
+   *   through Cloudflare's DNS over HTTPS).
    */
   constructor(o) {
     this.storage = o.storage;
-    this.products = o.products.filter((p) => p && /^[a-z0-9-]{1,40}$/.test(p.id) && p.name);
+    /** @type {Product[]} */ this.listed = o.products.filter((p) => p && /^[a-z0-9-]{1,40}$/.test(p.id) && p.name);
+    /** @type {Product[]} */ this.products = this.listed;
+    this.fetch = o.fetch ?? ((/** @type {any} */ url, /** @type {any} */ init) => fetch(url, init));
+    this.resolveTxt = o.resolveTxt ?? ((/** @type {string} */ name) => dohTxt(this.fetch, name));
+    /** @type {Map<string, Vendor>} */ this.vendors = new Map();
+    /** @type {Map<string, Product>} */ this.vendorProducts = new Map();
+    /** @type {Map<string, string>} */ this.claims = new Map();
     this.publish = o.publish ?? (async () => {});
     this.sendMail = o.sendMail ?? (async () => {});
     this.verifyHuman = o.verifyHuman ?? null;
@@ -108,6 +135,10 @@ export class InviteQueue {
     for (const [, e] of await get("e:")) this.entries.set(e.seq, e);
     for (const [, c] of await get("c:")) this.codes.set(c.id, c);
     this.chat = (await this.storage.get("chat")) ?? [];
+    for (const [, v] of await get("v:")) this.vendors.set(v.id, v);
+    for (const [, p] of await get("p:")) this.vendorProducts.set(p.id, p);
+    for (const [k, c] of await get("pc:")) this.claims.set(k.slice(3), c.vendor);
+    this.refreshProducts();
     this.loaded = true;
   }
 
@@ -122,10 +153,14 @@ export class InviteQueue {
     const route = ROUTES[`${r.method} ${r.path}`];
     if (!route) return { status: 404, body: { error: "not_found" } };
     try {
-      const user = await this.session(r.token ?? "");
+      const token = r.token ?? "";
+      // An API key ("vk_…") stands for a vendor, not a person.
+      const apiVendor = token.startsWith("vk_") ? await this.vendorByKey(token) : null;
+      if (token.startsWith("vk_") && !apiVendor) throw new QueueError(401, "key");
+      const user = apiVendor ? null : await this.session(token);
       if (user) this.touch(user);
       const body = r.body && typeof r.body === "object" ? r.body : {};
-      return { status: 200, body: (await route.call(this, { body, user, ip: r.ip ?? "", token: r.token ?? "" })) ?? { ok: true } };
+      return { status: 200, body: (await route.call(this, { body, user, ip: r.ip ?? "", token, apiVendor })) ?? { ok: true } };
     } catch (err) {
       if (err instanceof QueueError) return { status: err.status, body: { error: err.code } };
       throw err;
@@ -298,6 +333,8 @@ export class InviteQueue {
         names: p.names ?? {},
         icon: iconOf(p),
         hosts: hostsOf(p),
+        kind: p.kind === "referral" ? "referral" : "invite",
+        official: Boolean(p.vendor),
         open: [...this.codes.values()].filter((c) => c.product === p.id && c.state === "open").length,
         waiting: waiting.filter((e) => e.state === "waiting" && e.products.includes(p.id)).length,
       })),
@@ -366,6 +403,165 @@ export class InviteQueue {
     if (this.chat.length === before) return;
     await this.storage.put("chat", this.chat);
     await this.publish(CHANNEL, "chat-removed", { id }).catch(() => {});
+  }
+
+  // ——— Vendors ———
+
+  /** The listed products, then vendors' own; a vendor that took one over is noted on it. */
+  refreshProducts() {
+    const live = (/** @type {string | undefined} */ id) => {
+      const v = id ? this.vendors.get(id) : undefined;
+      return v && !v.disabled ? v.id : undefined;
+    };
+    const listed = this.listed.map((p) => ({ ...p, vendor: live(this.claims.get(p.id)) }));
+    const ids = new Set(listed.map((p) => p.id));
+    const own = [...this.vendorProducts.values()]
+      .filter((p) => !p.hidden && !ids.has(p.id) && live(p.vendor))
+      .sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
+    this.products = [...listed, ...own];
+  }
+
+  /** @param {string} key */
+  async vendorByKey(key) {
+    if (!/^vk_[a-z0-9]{8,40}_[a-z0-9]{32}$/.test(key)) return null;
+    const v = this.vendors.get(key.split("_")[1]);
+    if (!v || v.disabled || !v.keyHash || v.keyHash !== (await sha256(key))) return null;
+    return v;
+  }
+
+  /** The vendor a call acts for: its API key, or the signed-in person's vendor account. */
+  vendorFor(/** @type {{ user: User | null, apiVendor: Vendor | null }} */ a) {
+    if (a.apiVendor) return a.apiVendor;
+    this.must(a.user);
+    const v = [...this.vendors.values()].find((x) => x.uid === a.user?.uid);
+    if (!v) throw new QueueError(404, "no_vendor");
+    if (v.disabled) throw new QueueError(403, "vendor_disabled");
+    return v;
+  }
+
+  /** Domains this vendor has shown are theirs: the owner's company email, and DNS records. @param {Vendor} v */
+  domainsOf(v) {
+    const out = Object.entries(v.dns)
+      .filter(([, d]) => d.verified)
+      .map(([domain]) => domain);
+    const mail = mailDomain(this.users.get(v.uid)?.email ?? "");
+    if (mail && !out.includes(mail)) out.unshift(mail);
+    return out;
+  }
+
+  /** @param {Vendor} v */
+  productsOf(v) {
+    const own = [...this.vendorProducts.values()].filter((p) => p.vendor === v.id && !p.hidden);
+    const claimed = this.listed.filter((p) => this.claims.get(p.id) === v.id);
+    return [...claimed.map((p) => ({ ...p, claimed: true })), ...own.map((p) => ({ ...p, claimed: false }))];
+  }
+
+  /** @param {Vendor} v */
+  vendorView(v) {
+    const user = this.users.get(v.uid);
+    const entries = [...this.entries.values()];
+    const verified = new Set(this.domainsOf(v));
+    const mail = mailDomain(user?.email ?? "");
+    return {
+      id: v.id,
+      email: user?.email ?? "",
+      disabled: Boolean(v.disabled),
+      domains: [
+        ...(mail ? [{ domain: mail, verified: true, via: "email" }] : []),
+        ...Object.entries(v.dns)
+          .filter(([domain]) => domain !== mail)
+          .map(([domain, d]) => ({ domain, verified: Boolean(d.verified), via: "dns", record: { name: DNS_PREFIX + domain, value: `hibira-invite-queue=${d.token}` } })),
+      ],
+      products: this.productsOf(v).map((p) => {
+        const codes = [...this.codes.values()].filter((c) => c.product === p.id && c.vendor === v.id);
+        return {
+          id: p.id,
+          name: p.name,
+          names: p.names ?? {},
+          icon: iconOf(p),
+          hosts: hostsOf(p),
+          kind: p.kind === "referral" ? "referral" : "invite",
+          claimed: p.claimed,
+          editable: !p.claimed,
+          stats: {
+            open: codes.filter((c) => c.state === "open").length,
+            offered: codes.filter((c) => c.state === "offered").length,
+            taken: codes.filter((c) => c.state === "taken").length,
+            ok: codes.filter((c) => c.report === "ok").length,
+            bad: codes.filter((c) => c.report === "bad").length,
+            waiting: entries.filter((e) => e.state === "waiting" && e.products.includes(p.id)).length,
+          },
+        };
+      }),
+      verifiedDomains: [...verified],
+      key: v.keyHash ? { hint: v.keyHint ?? "", at: v.keyAt ?? 0 } : null,
+      webhook: v.webhook ? { url: v.webhook.url } : null,
+    };
+  }
+
+  /** @param {Vendor} v */
+  async saveVendor(v) {
+    this.vendors.set(v.id, v);
+    await this.storage.put(`v:${v.id}`, v);
+  }
+
+  /**
+   * Takes a product out of the line: its open and offered codes from this
+   * vendor go, and people waiting only for it leave the line.
+   * @param {string} productId @param {string} vendorId
+   */
+  async dropProduct(productId, vendorId) {
+    for (const c of [...this.codes.values()]) {
+      if (c.product !== productId || c.vendor !== vendorId || c.state === "taken") continue;
+      if (c.state === "offered" && c.seq !== undefined) {
+        const e = this.entries.get(c.seq);
+        if (e) {
+          e.state = "waiting";
+          delete e.codeId;
+          delete e.deadline;
+          await this.saveEntry(e);
+          await this.notify(e.uid);
+        }
+      }
+      await this.del(this.codes, c.id, `c:${c.id}`);
+    }
+    if (this.listed.some((p) => p.id === productId)) return;
+    for (const e of [...this.entries.values()]) {
+      if (!e.products.includes(productId) || e.state !== "waiting") continue;
+      e.products = e.products.filter((x) => x !== productId);
+      if (e.products.length) await this.saveEntry(e);
+      else await this.dropEntry(e);
+      await this.notify(e.uid);
+    }
+  }
+
+  /**
+   * Posts one event to the vendor's webhook, signed like Hibira's other
+   * webhooks: Hibira-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "t.body">.
+   * Best effort: a failed delivery is not retried.
+   * @param {string | undefined} vendorId @param {string} type @param {Record<string, unknown>} data
+   * @returns {Promise<number>} the HTTP status, 0 when it did not answer
+   */
+  async deliver(vendorId, type, data) {
+    const v = vendorId ? this.vendors.get(vendorId) : undefined;
+    if (!v?.webhook || v.disabled) return 0;
+    const now = this.now();
+    const body = JSON.stringify({ id: `evt_${this.random(16)}`, type, created: Math.floor(now / 1000), data });
+    const t = Math.floor(now / 1000);
+    const sig = await hmacHex(v.webhook.secret, `${t}.${body}`);
+    try {
+      const signal = typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? AbortSignal.timeout(WEBHOOK_TIMEOUT_MS) : undefined;
+      const res = await this.fetch(v.webhook.url, {
+        method: "POST",
+        headers: { "content-type": "application/json", "user-agent": "Hibira-Invite-Queue/1", "hibira-signature": `t=${t},v1=${sig}` },
+        body,
+        redirect: "manual",
+        signal,
+      });
+      return res.status;
+    } catch {
+      return 0;
+    }
   }
 
   /** @param {User | null} user @returns {asserts user is User} */
@@ -515,6 +711,12 @@ const ROUTES = {
     this.meta.served += 1;
     await this.saveMeta();
     await this.announce();
+    if (code.vendor) {
+      await this.deliver(code.vendor, "code.taken", { code_id: code.id, product: code.product, value: code.value, taken_at: now });
+      const left = [...this.codes.values()].some((c) => c.product === code.product && c.vendor === code.vendor && c.state === "open");
+      const waiting = [...this.entries.values()].filter((x) => x.state === "waiting" && x.products.includes(code.product)).length;
+      if (!left && waiting) await this.deliver(code.vendor, "codes.empty", { product: code.product, waiting });
+    }
     return { me: this.me(user), code: { id: code.id, product: code.product, value: code.value } };
   },
 
@@ -539,6 +741,7 @@ const ROUTES = {
     if (code.report || this.now() - (code.takenAt ?? 0) > REPORT_WINDOW_MS) throw new QueueError(409, "reported");
     code.report = body.works ? "ok" : "bad";
     await this.saveCode(code);
+    if (code.vendor) await this.deliver(code.vendor, "code.reported", { code_id: code.id, product: code.product, value: code.value, works: code.report === "ok" });
     if (code.report === "ok") {
       const donor = this.users.get(code.donor);
       if (donor) {
@@ -562,7 +765,7 @@ const ROUTES = {
         user.cooldownUntil = 0;
         await this.saveUser(user);
         // Back in line, ahead of everyone still waiting.
-        await this.saveEntry({ seq: lowestFreeSeq(this), uid: user.uid, products: [code.product], at: now, state: "waiting", requeued: true, avoid: [code.donor] });
+        await this.saveEntry({ seq: lowestFreeSeq(this), uid: user.uid, products: [code.product], at: now, state: "waiting", requeued: true, ...(code.vendor ? {} : { avoid: [code.donor] }) });
         await this.match();
         await this.announce();
       } else {
@@ -652,6 +855,204 @@ const ROUTES = {
     return { ok: true };
   },
 
+  // ——— Vendors ———
+  // A vendor account belongs to one signed-in person. Products, codes and
+  // the stats are also open to the account's API key (Authorization:
+  // Bearer vk_…), so a vendor's own systems can top codes up.
+
+  async "GET /vendor"({ user, apiVendor }) {
+    if (apiVendor) return { vendor: this.vendorView(apiVendor) };
+    this.must(user);
+    const v = [...this.vendors.values()].find((x) => x.uid === user.uid);
+    const domain = mailDomain(user.email);
+    return { vendor: v ? this.vendorView(v) : null, emailDomain: user.email.split("@")[1] ?? "", companyEmail: Boolean(domain) };
+  },
+
+  async "POST /vendor/start"({ user }) {
+    this.must(user);
+    if (user.blocked) throw new QueueError(403, "blocked");
+    let v = [...this.vendors.values()].find((x) => x.uid === user.uid);
+    if (!v) {
+      v = { id: this.random(12), uid: user.uid, at: this.now(), dns: {}, webhook: null };
+      await this.saveVendor(v);
+    }
+    return { vendor: this.vendorView(v) };
+  },
+
+  // A domain without a company email: add the TXT record this answers, then
+  // call again to check it.
+  async "POST /vendor/dns"({ body, user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    const domain = cleanHost(body.domain);
+    if (!domain || FREE_MAIL.has(domain)) throw new QueueError(400, "domain");
+    if (!v.dns[domain]) {
+      if (Object.keys(v.dns).length >= 10) throw new QueueError(409, "too_many");
+      v.dns[domain] = { token: this.random(24) };
+      await this.saveVendor(v);
+      return { vendor: this.vendorView(v), verified: false };
+    }
+    if (v.dns[domain].verified) return { vendor: this.vendorView(v), verified: true };
+    const now = this.now();
+    if (now - (v.dnsChecked ?? 0) < VENDOR_DNS_GAP_MS) throw new QueueError(429, "wait");
+    v.dnsChecked = now;
+    const want = `hibira-invite-queue=${v.dns[domain].token}`;
+    const records = await this.resolveTxt(DNS_PREFIX + domain).catch(() => []);
+    if (records.some((r) => r.trim() === want)) v.dns[domain].verified = now;
+    await this.saveVendor(v);
+    return { vendor: this.vendorView(v), verified: Boolean(v.dns[domain].verified) };
+  },
+
+  // Lists a new product, edits one of the vendor's own, or takes over a
+  // listed one whose site is on a domain the vendor has verified.
+  async "POST /vendor/products"({ body, user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    const domains = this.domainsOf(v);
+    if (!domains.length) throw new QueueError(403, "domain_unverified");
+    const id = String(body.id ?? "").trim().toLowerCase();
+    const listed = this.listed.find((p) => p.id === id);
+    if (listed) {
+      const owner = this.claims.get(id);
+      if (owner && owner !== v.id && this.vendors.get(owner) && !this.vendors.get(owner)?.disabled) throw new QueueError(409, "claimed");
+      if (!hostsOf(listed).some((h) => covered(h, domains))) throw new QueueError(403, "domain_unverified");
+      if (owner !== v.id) {
+        if (this.productsOf(v).length >= VENDOR_PRODUCTS_MAX) throw new QueueError(409, "too_many");
+        this.claims.set(id, v.id);
+        await this.storage.put(`pc:${id}`, { vendor: v.id, at: this.now() });
+        this.refreshProducts();
+        await this.announce();
+      }
+      return { vendor: this.vendorView(v) };
+    }
+    const existing = id ? this.vendorProducts.get(id) : undefined;
+    if (existing && (existing.vendor !== v.id || existing.hidden)) throw new QueueError(409, "taken_id");
+    if (!existing && this.productsOf(v).length >= VENDOR_PRODUCTS_MAX) throw new QueueError(409, "too_many");
+    const name = cleanText(body.name, 40);
+    if (name.length < 2) throw new QueueError(400, "name");
+    const hosts = [...new Set((Array.isArray(body.hosts) ? body.hosts : [body.hosts]).map(cleanHost).filter(Boolean))].slice(0, 5);
+    if (!hosts.length) throw new QueueError(400, "host");
+    if (!hosts.every((h) => covered(h, domains))) throw new QueueError(403, "domain_unverified");
+    const icon = typeof body.icon === "string" && /^https:\/\/[^\s"'<>()\\]{1,300}$/.test(body.icon.trim()) ? body.icon.trim() : "";
+    /** @type {Record<string, string>} */ const names = {};
+    for (const lang of LANGS) {
+      const n = cleanText(body.names?.[lang], 60);
+      if (n.length >= 2) names[lang] = n;
+    }
+    const newId = existing?.id ?? slug(id || name);
+    if (!existing && (!newId || this.products.some((p) => p.id === newId) || this.vendorProducts.has(newId))) throw new QueueError(409, "taken_id");
+    /** @type {Product} */ const p = { id: newId, name, names, icon, hosts, kind: body.kind === "referral" ? "referral" : "invite", vendor: v.id, at: existing?.at ?? this.now() };
+    this.vendorProducts.set(p.id, p);
+    await this.storage.put(`p:${p.id}`, p);
+    this.refreshProducts();
+    await this.announce();
+    return { vendor: this.vendorView(v), product: p.id };
+  },
+
+  async "POST /vendor/products/remove"({ body, user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    const id = String(body.id ?? "");
+    if (this.claims.get(id) === v.id) {
+      this.claims.delete(id);
+      await this.storage.delete(`pc:${id}`);
+    } else {
+      const p = this.vendorProducts.get(id);
+      if (!p || p.vendor !== v.id || p.hidden) throw new QueueError(404, "not_found");
+      p.hidden = true;
+      await this.storage.put(`p:${p.id}`, p);
+    }
+    await this.dropProduct(id, v.id);
+    this.refreshProducts();
+    await this.match();
+    await this.announce();
+    return { vendor: this.vendorView(v) };
+  },
+
+  // A new API key; the old one stops working. The key is shown only here.
+  async "POST /vendor/key"({ user }) {
+    const v = this.vendorFor({ user, apiVendor: null });
+    const key = `vk_${v.id}_${this.random(32)}`;
+    v.keyHash = await sha256(key);
+    v.keyHint = key.slice(-4);
+    v.keyAt = this.now();
+    await this.saveVendor(v);
+    return { key, vendor: this.vendorView(v) };
+  },
+
+  // Where events go (https only; "" turns them off). A new signing secret
+  // comes with each change and is shown only here.
+  async "POST /vendor/webhook"({ body, user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    const url = String(body.url ?? "").trim();
+    if (!url) {
+      v.webhook = null;
+      await this.saveVendor(v);
+      return { vendor: this.vendorView(v) };
+    }
+    if (!webhookUrl(url)) throw new QueueError(400, "url");
+    v.webhook = { url, secret: `whsec_${this.random(32)}` };
+    await this.saveVendor(v);
+    return { secret: v.webhook.secret, vendor: this.vendorView(v) };
+  },
+
+  async "POST /vendor/webhook/test"({ user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    if (!v.webhook) throw new QueueError(409, "no_webhook");
+    return { status: await this.deliver(v.id, "webhook.test", { vendor: v.id }) };
+  },
+
+  // Official codes, by the batch. They go to the line like anyone's, without
+  // the limits on new givers.
+  async "POST /vendor/codes"({ body, user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    const product = this.products.find((p) => p.id === body.product && p.vendor === v.id);
+    if (!product) throw new QueueError(404, "products");
+    const list = Array.isArray(body.codes) ? body.codes : String(body.codes ?? "").split(/\r?\n/);
+    if (list.length > VENDOR_BATCH_MAX) throw new QueueError(400, "too_many_codes");
+    const cleaned = [...new Set(list.map((x) => cleanCode(x)).filter(Boolean))];
+    if (!cleaned.length) throw new QueueError(400, "code");
+    const hosts = hostsOf(product);
+    if (hosts.length && cleaned.some((x) => !linkOnHosts(x, hosts))) throw new QueueError(400, "host");
+    const known = new Set([...this.codes.values()].filter((c) => c.product === product.id).map((c) => c.value));
+    const values = cleaned.filter((x) => !known.has(x));
+    const open = [...this.codes.values()].filter((c) => c.vendor === v.id && c.product === product.id && c.state !== "taken").length;
+    if (open + values.length > VENDOR_OPEN_MAX) throw new QueueError(409, "too_many_codes");
+    const now = this.now();
+    for (const value of values) {
+      this.meta.code += 1;
+      await this.saveCode({ id: this.meta.code, product: product.id, value, donor: `vendor:${v.id}`, vendor: v.id, at: now, state: "open" });
+    }
+    await this.saveMeta();
+    await this.match();
+    await this.announce();
+    return { added: values.length, duplicates: cleaned.length - values.length, vendor: this.vendorView(v) };
+  },
+
+  // Takes back the vendor's codes for a product that nobody holds yet.
+  async "POST /vendor/codes/withdraw"({ body, user, apiVendor }) {
+    const v = this.vendorFor({ user, apiVendor });
+    let removed = 0;
+    for (const c of [...this.codes.values()]) {
+      if (c.vendor !== v.id || c.product !== body.product || c.state !== "open") continue;
+      await this.del(this.codes, c.id, `c:${c.id}`);
+      removed += 1;
+    }
+    await this.announce();
+    return { removed, vendor: this.vendorView(v) };
+  },
+
+  async "POST /admin/vendor/disable"({ body, user }) {
+    this.must(user);
+    if (!this.isAdmin(user)) throw new QueueError(403, "forbidden");
+    const v = this.vendors.get(String(body.id));
+    if (!v) throw new QueueError(404, "not_found");
+    v.disabled = true;
+    await this.saveVendor(v);
+    for (const p of this.productsOf(v)) await this.dropProduct(p.id, v.id);
+    this.refreshProducts();
+    await this.match();
+    await this.announce();
+    return { ok: true };
+  },
+
   async "POST /admin/ban"({ body, user }) {
     this.must(user);
     if (!this.isAdmin(user)) throw new QueueError(403, "forbidden");
@@ -712,6 +1113,71 @@ function cleanCode(v) {
   // A link must be https; anything else is shown as text, never as a link.
   if (/^[a-z][a-z0-9+.-]*:/i.test(s) && !/^https:\/\/[^\s]+$/i.test(s)) return "";
   return s;
+}
+
+/** A host name, from a domain or a link ("https://www.example.com/x" gives "www.example.com"). @param {unknown} v */
+function cleanHost(v) {
+  let s = String(v ?? "").trim().toLowerCase();
+  if (/^https?:\/\//.test(s)) {
+    try {
+      s = new URL(s).hostname;
+    } catch {
+      return "";
+    }
+  }
+  s = s.replace(/\.$/, "");
+  return s.length <= 190 && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) && !/^[\d.]+$/.test(s) ? s : "";
+}
+
+/** The domain of a company email ("" for free mail). @param {string} email */
+function mailDomain(email) {
+  const d = email.split("@")[1] ?? "";
+  return d && !FREE_MAIL.has(d) ? d : "";
+}
+
+/** Is host this domain or under it? @param {string} host @param {string[]} domains */
+const covered = (host, domains) => domains.some((d) => host === d || host.endsWith("." + d));
+
+/** @param {string} s */
+function slug(s) {
+  const out = s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return out.length >= 2 ? out : "";
+}
+
+/** A webhook address: https on a public name, never this machine or a private address. @param {string} url */
+function webhookUrl(url) {
+  if (url.length > 500) return false;
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:" || u.username || u.password) return false;
+  const h = u.hostname.toLowerCase();
+  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return false;
+  if (/^[\d.]+$/.test(h) || h.includes(":") || h.startsWith("[")) return false;
+  return h.includes(".");
+}
+
+/** @param {string} secret @param {string} message */
+async function hmacHex(secret, message) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** TXT records through Cloudflare's DNS over HTTPS. @param {typeof fetch} f @param {string} name */
+async function dohTxt(f, name) {
+  const res = await f(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TXT`, { headers: { accept: "application/dns-json" } });
+  const data = /** @type {{ Answer?: { type: number, data: string }[] }} */ (await res.json());
+  return (data.Answer ?? []).filter((a) => a.type === 16).map((a) => a.data.replace(/" "/g, "").replace(/^"|"$/g, ""));
 }
 
 /** @param {string} uid */

@@ -33,6 +33,13 @@ Live: [demos.hibira.io/examples/invite-queue](https://demos.hibira.io/examples/i
   subscription count (`pusher:subscription_count`). Turn on
   *Subscription count* on your app's settings page for it.
 
+- **Vendors sign up themselves** (`/vendor`). A company email (or a DNS
+  TXT record `_hibira-invite-queue.<domain>`) verifies a domain; then the
+  vendor lists its product or takes over the one already listed there, puts
+  official codes in by the batch (up to 1,000, from the page or with an API
+  key: `Authorization: Bearer vk_…`), and gets signed webhooks
+  (`code.taken`, `code.reported`, `codes.empty`; header
+  `Hibira-Signature: t=…,v1=<HMAC-SHA256 of "t.body">`).
 - **Installable.** The hosted page has a web app manifest and a small
   service worker (`public/sw.js`) that keeps the page's shell, so it can be
   added to the home screen and opens offline; the line and the chat always

@@ -7,6 +7,9 @@ import HeroGlobe from './HeroGlobe';
 import Link from 'next/link';
 import { track } from './Analytics';
 import { ASK_URL, askBrand } from './LiveChat';
+import { api, ApiError } from '@/lib/api';
+import VendorPanel, { VendorIntro } from './Vendor';
+import { VENDOR_STRINGS } from '@/lib/vendor-strings';
 import { API, AUTH_URL, BASE_PATH, SIGNUP_URL, SOURCE_URL, iconUrl } from '@/lib/demo';
 import type { ErrorCode } from '@/lib/strings';
 
@@ -15,7 +18,17 @@ import type { ErrorCode } from '@/lib/strings';
 // something changed: "state" on the public channel invite-queue, "me" on
 // the person's own private channel. Chat messages arrive in full.
 
-type Product = { id: string; name: string; names?: Record<string, string>; icon?: string; hosts?: string[]; open: number; waiting: number };
+type Product = {
+  id: string;
+  name: string;
+  names?: Record<string, string>;
+  icon?: string;
+  hosts?: string[];
+  kind?: 'invite' | 'referral';
+  official?: boolean;
+  open: number;
+  waiting: number;
+};
 type Message = { id: number; uid: string; name: string; text: string; at: number };
 type Taken = { id: number; product: string; value: string; takenAt: number; report: 'ok' | 'bad' | null; canReport: boolean };
 type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null };
@@ -49,28 +62,6 @@ function writeToken(token: string) {
     if (token) localStorage.setItem(TOKEN, token);
     else localStorage.removeItem(TOKEN);
   } catch {}
-}
-
-class ApiError extends Error {
-  constructor(public code: ErrorCode) {
-    super(code);
-  }
-}
-
-async function api<T>(path: string, token: string, body?: unknown): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(API + path, {
-      method: body === undefined ? 'GET' : 'POST',
-      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiError('network');
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError((data.error as ErrorCode) || 'network');
-  return data as T;
 }
 
 export default function QueueView({
@@ -144,7 +135,10 @@ export default function QueueView({
             body: new URLSearchParams({ socket_id: socketId, channel_name: channelName }),
           })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-            .then((data) => callback(null, data), (err) => callback(err, null));
+            .then(
+              (data) => callback(null, data),
+              (err) => callback(err, null),
+            );
         },
       },
     });
@@ -171,15 +165,18 @@ export default function QueueView({
     const ch = pusher.subscribe(name);
     const seen = { offer: false };
     ch.bind('me', () => {
-      api<State>('/state', tokenRef.current).then((s) => {
-        setState(s);
-        const offer = s.me?.entry?.offer;
-        if (offer && !seen.offer) {
-          seen.offer = true;
-          const p = products?.find((x) => x.id === offer.product);
-          notify(t.notifyTitle, t.notifyBody(p?.names?.[lang] || p?.name || offer.product));
-        }
-      }, () => {});
+      api<State>('/state', tokenRef.current).then(
+        (s) => {
+          setState(s);
+          const offer = s.me?.entry?.offer;
+          if (offer && !seen.offer) {
+            seen.offer = true;
+            const p = products?.find((x) => x.id === offer.product);
+            notify(t.notifyTitle, t.notifyBody(p?.names?.[lang] || p?.name || offer.product));
+          }
+        },
+        () => {},
+      );
     });
     return () => pusher.unsubscribe(name);
   }, [pusher, uid, t, products, lang]);
@@ -194,9 +191,9 @@ export default function QueueView({
         if (code === 'sign_in') {
           writeToken('');
           tokenRef.current = '';
-            load();
+          load();
         }
-        setError(t.errors[code] ?? t.errors.network);
+        setError(t.errors[code as ErrorCode] ?? t.errors.network);
         return undefined;
       }
     },
@@ -289,6 +286,9 @@ export default function QueueView({
             </span>
             {me?.entry?.state === 'offered' && <span className="choose-alert">{t.chooseTurn}</span>}
           </Link>
+          <Link href="/vendor" className="vendor-link">
+            {VENDOR_STRINGS[lang].homeLink}
+          </Link>
         </nav>
       ) : (
         <nav className="tabs">
@@ -299,6 +299,9 @@ export default function QueueView({
           <Link href="/give" className={'tab' + (view === 'give' ? ' tab-on' : '')} aria-current={view === 'give' ? 'page' : undefined}>
             {t.giveTitle}
           </Link>
+          <Link href="/vendor" className={'tab' + (view === 'vendor' ? ' tab-on' : '')} aria-current={view === 'vendor' ? 'page' : undefined}>
+            {VENDOR_STRINGS[lang].tab}
+          </Link>
         </nav>
       )}
 
@@ -308,73 +311,92 @@ export default function QueueView({
         </p>
       )}
 
-      <div className="grid">
-        <div className="col">
-          <section className="card">
-            <h2>{t.products}</h2>
-            <ul className="product-cards">
-              {state.products.map((p) => (
-                <li key={p.id} className={'product-card' + (p.open > 0 ? ' has-codes' : '')}>
-                  <ProductIcon product={p} size={40} />
-                  <span className="product-card-name">{name(p.id)}</span>
-                  <span className="product-card-counts">
-                    <span>
-                      <strong>{p.open}</strong> {t.colCodes}
-                    </span>
-                    <span>
-                      <strong>{p.waiting}</strong> {t.colWaiting}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <a className="ask-brand" href={ASK_URL} onClick={askBrand}>
-              {t.askBrand}
-            </a>
-          </section>
-
-          {view === 'home' ? (
-            me && <Account me={me} call={call} onSignOut={signOut} />
-          ) : !me ? (
-            <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
+      {view === 'vendor' ? (
+        <div className="vendor-page">
+          {!me ? (
+            <>
+              <VendorIntro />
+              <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
+            </>
           ) : (
             <>
               <Account me={me} call={call} onSignOut={signOut} />
-              {view === 'get' ? (
-                <>
-                  <Line me={me} products={state.products} call={call} name={name} lang={lang} />
-                  {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
-                </>
-              ) : (
-                <Give me={me} products={state.products} call={call} name={name} />
-              )}
+              <VendorPanel token={tokenRef.current} listed={state.products} />
             </>
           )}
-
-          <section className="card rules">
-            <h2>{t.rulesTitle}</h2>
-            <ul>
-              {t.rules(state.holdHours).map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          </section>
         </div>
-
-        <div className="col">
-          <Chat messages={state.chat} me={me} call={call} />
-          <section className="card powered">
-            <h2>{t.poweredTitle}</h2>
-            <p>{t.poweredBody}</p>
-            <p className="actions">
-              <a className="button primary" href={SIGNUP_URL} onClick={() => track('signup_click', { source: 'invite_queue' })}>
-                {t.poweredCta}
+      ) : (
+        <div className="grid">
+          <div className="col">
+            <section className="card">
+              <h2>{t.products}</h2>
+              <ul className="product-cards">
+                {state.products.map((p) => (
+                  <li key={p.id} className={'product-card' + (p.open > 0 ? ' has-codes' : '')}>
+                    <ProductIcon product={p} size={40} />
+                    <span className="product-card-name">
+                      {name(p.id)}
+                      {p.official && <span className="official">{VENDOR_STRINGS[lang].official}</span>}
+                    </span>
+                    <span className="product-card-counts">
+                      <span>
+                        <strong>{p.open}</strong> {t.colCodes}
+                      </span>
+                      <span>
+                        <strong>{p.waiting}</strong> {t.colWaiting}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <a className="ask-brand" href={ASK_URL} onClick={askBrand}>
+                {t.askBrand}
               </a>
-              <a href={SOURCE_URL}>{t.poweredSource}</a>
-            </p>
-          </section>
+            </section>
+
+            {view === 'home' ? (
+              me && <Account me={me} call={call} onSignOut={signOut} />
+            ) : !me ? (
+              <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
+            ) : (
+              <>
+                <Account me={me} call={call} onSignOut={signOut} />
+                {view === 'get' ? (
+                  <>
+                    <Line me={me} products={state.products} call={call} name={name} lang={lang} />
+                    {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
+                  </>
+                ) : (
+                  <Give me={me} products={state.products} call={call} name={name} />
+                )}
+              </>
+            )}
+
+            <section className="card rules">
+              <h2>{t.rulesTitle}</h2>
+              <ul>
+                {t.rules(state.holdHours).map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <div className="col">
+            <Chat messages={state.chat} me={me} call={call} />
+            <section className="card powered">
+              <h2>{t.poweredTitle}</h2>
+              <p>{t.poweredBody}</p>
+              <p className="actions">
+                <a className="button primary" href={SIGNUP_URL} onClick={() => track('signup_click', { source: 'invite_queue' })}>
+                  {t.poweredCta}
+                </a>
+                <a href={SOURCE_URL}>{t.poweredSource}</a>
+              </p>
+            </section>
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
@@ -436,7 +458,16 @@ function SignIn({ lang, onDone, run, turnstile }: { lang: string; onDone: (token
           <form onSubmit={verify} className="row">
             <label className="grow">
               <span className="sr-only">{t.codeLabel}</span>
-              <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" maxLength={7} required placeholder={t.codeLabel} value={code} onChange={(e) => setCode(e.target.value)} />
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9 ]{6,7}"
+                maxLength={7}
+                required
+                placeholder={t.codeLabel}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
             </label>
             <button className="primary" disabled={busy}>
               {t.verify}
@@ -588,10 +619,13 @@ function TakenList({ me, call, name }: { me: Me; call: Call; name: (id: string) 
   const t = useT();
   const [copied, setCopied] = useState(0);
   const copy = (c: Taken) => {
-    navigator.clipboard?.writeText(c.value).then(() => {
-      setCopied(c.id);
-      setTimeout(() => setCopied(0), 1500);
-    }, () => {});
+    navigator.clipboard?.writeText(c.value).then(
+      () => {
+        setCopied(c.id);
+        setTimeout(() => setCopied(0), 1500);
+      },
+      () => {},
+    );
   };
   return (
     <section className="card">
@@ -634,7 +668,10 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
 
   const give = async (e: React.FormEvent) => {
     e.preventDefault();
-    const codes = text.split('\n').map((s) => s.trim()).filter(Boolean);
+    const codes = text
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const res = await call('/codes', { product, codes });
     if (res) track('give_codes', { product, count: codes.length });
     if (res) {
@@ -883,12 +920,23 @@ function useTurnstile(siteKey: string, lang: string) {
   return { ref, token, reset, on: Boolean(siteKey) };
 }
 
-export type View = 'home' | 'get' | 'give';
+export type View = 'home' | 'get' | 'give' | 'vendor';
 
 // The two doors on the first page: a gift for giving, a ticket for getting.
 function ChooseIcon({ kind }: { kind: 'give' | 'get' }) {
   return (
-    <svg className="choose-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      className="choose-icon"
+      viewBox="0 0 24 24"
+      width="40"
+      height="40"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       {kind === 'give' ? (
         <>
           <rect x="3.5" y="9" width="17" height="11.5" rx="1.8" />
