@@ -28,6 +28,8 @@ const REPORT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 const CLAIM_KEEP_MS = 14 * 24 * 60 * 60 * 1000;
 const USER_KEEP_MS = 90 * 24 * 60 * 60 * 1000;
 const DONOR_MAX_OPEN = 10;
+// Until one of their codes is reported working, a giver has one code out at a time.
+export const NEW_DONOR_MAX_OPEN = 1;
 const GIVE_MAX = 5;
 const CODE_MAX = 300;
 export const STRIKES_BLOCK = 3;
@@ -55,8 +57,8 @@ export class QueueError extends Error {
 /**
  * @typedef {{ get(key: string): Promise<any>, put(key: string, value: any): Promise<void>, delete(keys: string | string[]): Promise<unknown>, list(o: { prefix: string }): Promise<Map<string, any>> }} Storage
  * @typedef {{ to: string, kind: "code" | "turn", lang: string, code?: string, product?: string, deadline?: number, link?: string }} Mail
- * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string }} Product
- * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, reported: number }} User
+ * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string, hosts?: string[] }} Product
+ * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, vouched?: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, reported: number }} User
  * @typedef {{ seq: number, uid: string, products: string[], at: number, state: "waiting" | "offered", codeId?: number, deadline?: number, requeued?: boolean, avoid?: string[] }} Entry
  * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad" }} Code
  * @typedef {{ id: number, uid: string, name: string, text: string, at: number, reports: string[] }} ChatMessage
@@ -295,6 +297,7 @@ export class InviteQueue {
         name: p.name,
         names: p.names ?? {},
         icon: iconOf(p),
+        hosts: hostsOf(p),
         open: [...this.codes.values()].filter((c) => c.product === p.id && c.state === "open").length,
         waiting: waiting.filter((e) => e.state === "waiting" && e.products.includes(p.id)).length,
       })),
@@ -330,6 +333,7 @@ export class InviteQueue {
       banned: u.banned,
       blocked: u.blocked || u.banned,
       strikes: u.strikes,
+      newGiver: !u.vouched && !this.isAdmin(u),
       cooldownUntil: u.cooldownUntil > now ? u.cooldownUntil : 0,
       entry,
       taken: taken.map((c) => ({ id: c.id, product: c.product, value: c.value, takenAt: c.takenAt, report: c.report ?? null, canReport: !c.report && now - (c.takenAt ?? 0) < REPORT_WINDOW_MS })),
@@ -535,6 +539,13 @@ const ROUTES = {
     if (code.report || this.now() - (code.takenAt ?? 0) > REPORT_WINDOW_MS) throw new QueueError(409, "reported");
     code.report = body.works ? "ok" : "bad";
     await this.saveCode(code);
+    if (code.report === "ok") {
+      const donor = this.users.get(code.donor);
+      if (donor) {
+        donor.vouched = (donor.vouched ?? 0) + 1;
+        await this.saveUser(donor);
+      }
+    }
     if (code.report === "bad") {
       const donor = this.users.get(code.donor);
       if (donor) {
@@ -567,22 +578,28 @@ const ROUTES = {
   async "POST /codes"({ body, user }) {
     this.must(user);
     if (user.blocked) throw new QueueError(403, "blocked");
-    if (!this.products.some((p) => p.id === body.product)) throw new QueueError(400, "products");
-    const values = [...new Set((Array.isArray(body.codes) ? body.codes : [body.codes]).map((v) => cleanCode(v)).filter(Boolean))];
-    if (!values.length) throw new QueueError(400, "code");
+    const product = this.products.find((p) => p.id === body.product);
+    if (!product) throw new QueueError(400, "products");
+    const cleaned = [...new Set((Array.isArray(body.codes) ? body.codes : [body.codes]).map((v) => cleanCode(v)).filter(Boolean))];
+    if (!cleaned.length) throw new QueueError(400, "code");
+    const known = new Set([...this.codes.values()].map((c) => `${c.product}\u0000${c.value}`));
+    const values = cleaned.filter((v) => !known.has(`${product.id}\u0000${v}`));
+    if (!values.length) throw new QueueError(409, "duplicate");
+    // A link has to be on the product's own site, so a made-up or phishing
+    // link never reaches anyone; a plain code passes.
+    const hosts = hostsOf(product);
+    if (hosts.length && values.some((v) => !linkOnHosts(v, hosts))) throw new QueueError(400, "host");
     if (values.length > GIVE_MAX) throw new QueueError(400, "too_many_codes");
     const mine = [...this.codes.values()].filter((c) => c.donor === user.uid && c.state !== "taken");
+    if (!user.vouched && !this.isAdmin(user) && mine.length + values.length > NEW_DONOR_MAX_OPEN) throw new QueueError(409, "new_giver");
     if (mine.length + values.length > DONOR_MAX_OPEN) throw new QueueError(409, "too_many_codes");
-    const known = new Set([...this.codes.values()].map((c) => `${c.product}\u0000${c.value}`));
     let added = 0;
     for (const value of values) {
-      if (known.has(`${body.product}\u0000${value}`)) continue;
       this.meta.code += 1;
       await this.saveCode({ id: this.meta.code, product: body.product, value, donor: user.uid, at: this.now(), state: "open" });
       added += 1;
     }
     await this.saveMeta();
-    if (!added) throw new QueueError(409, "duplicate");
     await this.match();
     await this.announce();
     return { added, me: this.me(user) };
@@ -746,6 +763,30 @@ export class MemoryStorage {
   async list({ prefix }) {
     return new Map([...this.data].filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k, structuredClone(v)]));
   }
+}
+
+/**
+ * The sites a product's invite links may point to ("cursor.com" also
+ * allows www.cursor.com). Empty means any https link.
+ * @param {Product} p
+ */
+function hostsOf(p) {
+  return (Array.isArray(p.hosts) ? p.hosts : []).map((h) => String(h).toLowerCase()).filter((h) => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h));
+}
+
+/**
+ * Whether a given code is plain text, or a link on one of the hosts.
+ * @param {string} v @param {string[]} hosts
+ */
+function linkOnHosts(v, hosts) {
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) return true;
+  let host = "";
+  try {
+    host = new URL(v).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return hosts.some((h) => host === h || host.endsWith("." + h));
 }
 
 /**

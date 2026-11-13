@@ -7,12 +7,12 @@ import { configured, hibira } from './hibira';
 // lib/invite-queue.js in a Durable Object and sends real email.
 
 const PRODUCTS = [
-  { id: 'claude-code', name: 'Claude Code', icon: 'claude-code.png' },
-  { id: 'cursor', name: 'Cursor', icon: 'cursor.png' },
-  { id: 'lovable', name: 'Lovable', icon: 'lovable.png' },
+  { id: 'claude-code', name: 'Claude Code', icon: 'claude-code.png', hosts: ['claude.ai', 'claude.com'] },
+  { id: 'cursor', name: 'Cursor', icon: 'cursor.png', hosts: ['cursor.com', 'cursor.sh'] },
+  { id: 'lovable', name: 'Lovable', icon: 'lovable.png', hosts: ['lovable.dev'] },
 ];
 
-function products(): { id: string; name: string; icon?: string }[] {
+function products(): { id: string; name: string; icon?: string; hosts?: string[] }[] {
   try {
     const list = JSON.parse(process.env.INVITE_PRODUCTS || 'null');
     if (Array.isArray(list) && list.length) return list;

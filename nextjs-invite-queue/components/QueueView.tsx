@@ -13,7 +13,7 @@ import type { ErrorCode } from '@/lib/strings';
 // something changed: "state" on the public channel invite-queue, "me" on
 // the person's own private channel. Chat messages arrive in full.
 
-type Product = { id: string; name: string; names?: Record<string, string>; icon?: string; open: number; waiting: number };
+type Product = { id: string; name: string; names?: Record<string, string>; icon?: string; hosts?: string[]; open: number; waiting: number };
 type Message = { id: number; uid: string; name: string; text: string; at: number };
 type Taken = { id: number; product: string; value: string; takenAt: number; report: 'ok' | 'bad' | null; canReport: boolean };
 type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null };
@@ -23,6 +23,7 @@ type Me = {
   name: string;
   admin: boolean;
   blocked: boolean;
+  newGiver?: boolean;
   cooldownUntil: number;
   entry: null | { state: 'waiting' | 'offered'; products: string[]; ahead: number; offer: null | { product: string; deadline: number } };
   taken: Taken[];
@@ -654,6 +655,11 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
               ))}
             </select>
           </label>
+          {(() => {
+            const hosts = products.find((p) => p.id === product)?.hosts ?? [];
+            return hosts.length > 0 && <p className="small muted">{t.giveHosts(hosts.join(', '))}</p>;
+          })()}
+          {me.newGiver && <p className="small muted">{t.giveNewGiver}</p>}
           <label>
             <span className="small muted">{t.giveCodes}</span>
             <textarea rows={3} value={text} onChange={(e) => (setText(e.target.value), setThanks(''))} spellCheck={false} autoComplete="off" />
