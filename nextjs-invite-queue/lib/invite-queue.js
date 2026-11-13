@@ -38,6 +38,8 @@ const DONOR_MAX_OPEN = 10;
 // Until one of their codes is reported working, a giver has one code out at a time.
 export const NEW_DONOR_MAX_OPEN = 1;
 const GIVE_MAX = 5;
+// One code can go to at most this many people (Product.uses).
+const USES_MAX = 10;
 const CODE_MAX = 300;
 export const STRIKES_BLOCK = 3;
 const CHAT_KEEP = 100;
@@ -74,11 +76,11 @@ export class QueueError extends Error {
 /**
  * @typedef {{ get(key: string): Promise<any>, put(key: string, value: any): Promise<void>, delete(keys: string | string[]): Promise<unknown>, list(o: { prefix: string }): Promise<Map<string, any>> }} Storage
  * @typedef {{ to: string, kind: "code" | "turn", lang: string, code?: string, product?: string, deadline?: number, link?: string }} Mail
- * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string, hosts?: string[], kind?: "invite" | "referral", vendor?: string, hidden?: boolean, at?: number }} Product
+ * @typedef {{ id: string, name: string, names?: Record<string, string>, icon?: string, hosts?: string[], kind?: "invite" | "referral", uses?: number, vendor?: string, hidden?: boolean, at?: number }} Product
  * @typedef {{ id: string, uid: string, at: number, dns: Record<string, { token: string, verified?: number }>, dnsChecked?: number, keyHash?: string, keyHint?: string, keyAt?: number, webhook?: { url: string, secret: string } | null, disabled?: boolean }} Vendor
  * @typedef {{ uid: string, email: string, name: string, lang: string, admin?: boolean, strikes: number, vouched?: number, blocked: boolean, banned: boolean, seen: number, cooldownUntil: number, reported: number }} User
  * @typedef {{ seq: number, uid: string, products: string[], at: number, state: "waiting" | "offered", codeId?: number, deadline?: number, requeued?: boolean, avoid?: string[] }} Entry
- * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad", vendor?: string }} Code
+ * @typedef {{ id: number, product: string, value: string, donor: string, at: number, state: "open" | "offered" | "taken", seq?: number, taker?: string, takenAt?: number, report?: "ok" | "bad", vendor?: string, group?: number }} Code
  * @typedef {{ id: number, uid: string, name: string, text: string, at: number, reports: string[] }} ChatMessage
  */
 
@@ -290,7 +292,15 @@ export class InviteQueue {
     const line = [...this.entries.values()].filter((e) => e.state === "waiting").sort((a, b) => a.seq - b.seq);
     let changed = false;
     for (const code of open) {
-      const e = line.find((x) => x.state === "waiting" && x.products.includes(code.product) && x.uid !== code.donor && !x.avoid?.includes(code.donor) && !this.users.get(x.uid)?.banned);
+      const e = line.find(
+        (x) =>
+          x.state === "waiting" &&
+          x.products.includes(code.product) &&
+          x.uid !== code.donor &&
+          !x.avoid?.includes(code.donor) &&
+          !this.users.get(x.uid)?.banned &&
+          !this.hadGroup(x, code),
+      );
       if (!e) continue;
       e.state = "offered";
       e.codeId = code.id;
@@ -307,6 +317,25 @@ export class InviteQueue {
       }
     }
     if (changed) await this.announce();
+  }
+
+  /**
+   * Whether someone already took, or holds, another place of the same code
+   * (a code that goes to several people goes to each person once).
+   * @param {Entry} e @param {Code} code
+   */
+  hadGroup(e, code) {
+    if (code.group === undefined) return false;
+    for (const c of this.codes.values()) {
+      if (c === code || groupOf(c) !== code.group) continue;
+      if (c.taker === e.uid || (c.state === "offered" && c.seq === e.seq)) return true;
+    }
+    return false;
+  }
+
+  /** The open places of a code that goes to several people. @param {number} group */
+  async dropOpenPlaces(group) {
+    for (const c of [...this.codes.values()]) if (groupOf(c) === group && c.state === "open") await this.del(this.codes, c.id, `c:${c.id}`);
   }
 
   /** The product's name in a language, if it has one. @param {string} id @param {string} [lang] */
@@ -335,6 +364,7 @@ export class InviteQueue {
         hosts: hostsOf(p),
         kind: p.kind === "referral" ? "referral" : "invite",
         official: Boolean(p.vendor),
+        uses: usesOf(p),
         open: [...this.codes.values()].filter((c) => c.product === p.id && c.state === "open").length,
         waiting: waiting.filter((e) => e.state === "waiting" && e.products.includes(p.id)).length,
       })),
@@ -361,7 +391,18 @@ export class InviteQueue {
       };
     }
     const taken = [...this.codes.values()].filter((c) => c.taker === u.uid).sort((a, b) => (b.takenAt ?? 0) - (a.takenAt ?? 0));
-    const given = [...this.codes.values()].filter((c) => c.donor === u.uid).sort((a, b) => b.at - a.at);
+    /** @type {Map<number, Code[]>} */ const groups = new Map();
+    for (const c of this.codes.values()) if (c.donor === u.uid) groups.set(groupOf(c), [...(groups.get(groupOf(c)) ?? []), c]);
+    const given = [...groups].map(([id, cs]) => ({
+      id,
+      product: cs[0].product,
+      state: cs.some((c) => c.state === "open") ? "open" : cs.some((c) => c.state === "offered") ? "offered" : "taken",
+      at: cs[0].at,
+      report: cs.some((c) => c.report === "bad") ? "bad" : cs.some((c) => c.report === "ok") ? "ok" : null,
+      uses: cs.length,
+      taken: cs.filter((c) => c.state === "taken").length,
+    }));
+    given.sort((a, b) => b.at - a.at || b.id - a.id);
     return {
       uid: u.uid,
       email: u.email,
@@ -374,7 +415,7 @@ export class InviteQueue {
       cooldownUntil: u.cooldownUntil > now ? u.cooldownUntil : 0,
       entry,
       taken: taken.map((c) => ({ id: c.id, product: c.product, value: c.value, takenAt: c.takenAt, report: c.report ?? null, canReport: !c.report && now - (c.takenAt ?? 0) < REPORT_WINDOW_MS })),
-      given: given.map((c) => ({ id: c.id, product: c.product, state: c.state, at: c.at, report: c.report ?? null })),
+      given,
     };
   }
 
@@ -750,7 +791,11 @@ const ROUTES = {
       }
     }
     if (code.report === "bad") {
-      const donor = this.users.get(code.donor);
+      // A code that went to several people counts once, and its places
+      // that nobody has yet are taken off the queue.
+      const again = code.group !== undefined && [...this.codes.values()].some((c) => c !== code && groupOf(c) === code.group && c.report === "bad");
+      if (code.group !== undefined) await this.dropOpenPlaces(code.group);
+      const donor = again ? undefined : this.users.get(code.donor);
       if (donor) {
         donor.strikes += 1;
         if (donor.strikes >= STRIKES_BLOCK && !donor.blocked) {
@@ -793,13 +838,19 @@ const ROUTES = {
     const hosts = hostsOf(product);
     if (hosts.length && values.some((v) => !linkOnHosts(v, hosts))) throw new QueueError(400, "host");
     if (values.length > GIVE_MAX) throw new QueueError(400, "too_many_codes");
-    const mine = [...this.codes.values()].filter((c) => c.donor === user.uid && c.state !== "taken");
-    if (!user.vouched && !this.isAdmin(user) && mine.length + values.length > NEW_DONOR_MAX_OPEN) throw new QueueError(409, "new_giver");
-    if (mine.length + values.length > DONOR_MAX_OPEN) throw new QueueError(409, "too_many_codes");
+    const mine = new Set([...this.codes.values()].filter((c) => c.donor === user.uid && c.state !== "taken").map((c) => groupOf(c))).size;
+    if (!user.vouched && !this.isAdmin(user) && mine + values.length > NEW_DONOR_MAX_OPEN) throw new QueueError(409, "new_giver");
+    if (mine + values.length > DONOR_MAX_OPEN) throw new QueueError(409, "too_many_codes");
+    // A code that several people can use gets one place in the queue per person.
+    const uses = usesOf(product);
     let added = 0;
     for (const value of values) {
-      this.meta.code += 1;
-      await this.saveCode({ id: this.meta.code, product: body.product, value, donor: user.uid, at: this.now(), state: "open" });
+      const at = this.now();
+      const group = this.meta.code + 1;
+      for (let i = 0; i < uses; i++) {
+        this.meta.code += 1;
+        await this.saveCode({ id: this.meta.code, product: body.product, value, donor: user.uid, at, state: "open", ...(uses > 1 ? { group } : {}) });
+      }
       added += 1;
     }
     await this.saveMeta();
@@ -810,10 +861,11 @@ const ROUTES = {
 
   async "POST /codes/withdraw"({ body, user }) {
     this.must(user);
-    const code = this.codes.get(Number(body.id));
-    if (!code || code.donor !== user.uid) throw new QueueError(404, "not_found");
-    if (code.state !== "open") throw new QueueError(409, "in_use");
-    await this.del(this.codes, code.id, `c:${code.id}`);
+    const id = Number(body.id);
+    const places = [...this.codes.values()].filter((c) => groupOf(c) === id && c.donor === user.uid);
+    if (!places.length) throw new QueueError(404, "not_found");
+    if (!places.some((c) => c.state === "open")) throw new QueueError(409, "in_use");
+    await this.dropOpenPlaces(id);
     await this.announce();
     return { me: this.me(user) };
   },
@@ -1230,6 +1282,24 @@ export class MemoryStorage {
   async list({ prefix }) {
     return new Map([...this.data].filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k, structuredClone(v)]));
   }
+}
+
+/**
+ * How many people one code of a product can go to.
+ * @param {Product} p
+ */
+function usesOf(p) {
+  const n = Math.floor(Number(p.uses));
+  return n >= 1 ? Math.min(n, USES_MAX) : 1;
+}
+
+/**
+ * The code a place in the queue belongs to: a code that goes to several
+ * people has one place per person, all with the first place's id.
+ * @param {Code} c
+ */
+function groupOf(c) {
+  return c.group ?? c.id;
 }
 
 /**
