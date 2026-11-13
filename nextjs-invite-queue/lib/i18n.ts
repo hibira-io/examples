@@ -30,12 +30,14 @@ export function toLang(tag: string | null | undefined): Lang | null {
   return LANGS.find((l) => l === t.split('-')[0]) ?? null;
 }
 
-// The first pages under a language path (app/[lang]); zh-TW is /.
-const PATH_LANGS = ['en', 'zh-cn', 'ja', 'ko', 'th', 'vi'];
+// Language path slugs: hibira.io puts them first (/ja/tools/invite-queue/),
+// the build's own pages last (…/invite-queue/ja/, app/[lang]).
+const PATH_LANGS = ['zh-tw', 'zh-cn', 'ja', 'ko', 'th', 'vi'];
 
 export function detectLang(): Lang {
-  const segment = location.pathname.split('/').filter(Boolean).pop() ?? '';
-  const fromURL = toLang(PATH_LANGS.includes(segment) ? segment : new URLSearchParams(location.search).get('lang'));
+  const segments = location.pathname.split('/').filter(Boolean);
+  const slug = [segments[0], segments[segments.length - 1]].find((s) => s && PATH_LANGS.includes(s));
+  const fromURL = toLang(slug ?? new URLSearchParams(location.search).get('lang'));
   if (fromURL) {
     try {
       localStorage.setItem(KEY, fromURL);

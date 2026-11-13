@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import type { Lang } from './i18n';
+import { pageUrl } from './site';
 
 // What link previews and search engines show for the hosted copy, one set
-// per language. The first page (/) is zh-TW; /en/, /ja/ and the rest each
-// carry their own title, description and share image, so a link posted in
-// one language previews in that language. The interface follows the path
-// too (lib/i18n.ts).
+// per language. The first page is English; on hibira.io each other language
+// is under the site's language prefix (/ja/tools/invite-queue/, lib/site.ts)
+// with its own title, description and share image, so a link posted in one
+// language previews in that language. The interface follows the path too
+// (lib/i18n.ts).
 
 export const LANG_SLUGS: Record<Lang, string> = {
   en: 'en',
@@ -52,25 +54,25 @@ export const SEO: Record<Lang, { title: string; description: string }> = {
   },
 };
 
-/** The path of the first page in a language: '' for zh-TW, 'en/' for English. */
+/** The path slug of the first page in a language: '' for English, 'ja' for Japanese. */
 export function langPath(lang: Lang): string {
-  return lang === 'zh-TW' ? '' : `${LANG_SLUGS[lang]}/`;
+  return lang === 'en' ? '' : LANG_SLUGS[lang];
 }
 
 /** The first page's metadata in one language, for the hosted copy at `site`. */
 export function homeMetadata(lang: Lang, site: string): Metadata {
   const { title, description } = SEO[lang];
-  const path = langPath(lang);
+  const url = pageUrl(langPath(lang)) ?? site;
   const image = { url: `${site}og-${LANG_SLUGS[lang]}.png`, width: 1200, height: 630, alt: title };
   const languages: Record<string, string> = Object.fromEntries(
-    (Object.keys(LANG_SLUGS) as Lang[]).map((l) => [l, `${site}${langPath(l)}`]),
+    (Object.keys(LANG_SLUGS) as Lang[]).map((l) => [l, pageUrl(langPath(l)) ?? site]),
   );
   languages['x-default'] = site;
   return {
     title: `${title} | Hibira`,
     description,
-    alternates: { canonical: `${site}${path}`, languages },
-    openGraph: { title, description, url: `${site}${path}`, siteName: 'Hibira', type: 'website', locale: OG_LOCALES[lang], images: [image] },
+    alternates: { canonical: url, languages },
+    openGraph: { title, description, url, siteName: 'Hibira', type: 'website', locale: OG_LOCALES[lang], images: [image] },
     twitter: { card: 'summary_large_image', title, description, images: [image.url] },
   };
 }

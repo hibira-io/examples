@@ -841,8 +841,11 @@ const ROUTES = {
     const mine = new Set([...this.codes.values()].filter((c) => c.donor === user.uid && c.state !== "taken").map((c) => groupOf(c))).size;
     if (!user.vouched && !this.isAdmin(user) && mine + values.length > NEW_DONOR_MAX_OPEN) throw new QueueError(409, "new_giver");
     if (mine + values.length > DONOR_MAX_OPEN) throw new QueueError(409, "too_many_codes");
-    // A code that several people can use gets one place in the queue per person.
-    const uses = usesOf(product);
+    // A code that several people can use gets one place in the queue per
+    // person: as many as the giver says are left, at most the product's.
+    const max = usesOf(product);
+    const left = Math.floor(Number(body.uses));
+    const uses = left >= 1 ? Math.min(left, max) : max;
     let added = 0;
     for (const value of values) {
       const at = this.now();

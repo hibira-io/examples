@@ -271,26 +271,50 @@ export default function QueueView({
       </header>
 
       {view === 'home' ? (
-        <nav className="choose">
-          <Link href="/give" className="choose-button choose-give" onClick={() => track('choose', { path: 'give' })}>
-            <ChooseIcon kind="give" />
-            <span className="choose-text">
-              <strong>{t.chooseGive}</strong>
-              <span>{t.chooseGiveHint}</span>
-            </span>
-          </Link>
-          <Link href="/get" className="choose-button choose-get" onClick={() => track('choose', { path: 'get' })}>
-            <ChooseIcon kind="get" />
-            <span className="choose-text">
-              <strong>{t.chooseGet}</strong>
-              <span>{t.chooseGetHint}</span>
-            </span>
-            {me?.entry?.state === 'offered' && <span className="choose-alert">{t.chooseTurn}</span>}
-          </Link>
-          <Link href="/vendor" className="vendor-link">
-            {VENDOR_STRINGS[lang].homeLink}
-          </Link>
-        </nav>
+        <section className="pick" aria-labelledby="pick-title">
+          {me?.entry?.state === 'offered' && (
+            <Link href="/get" className="turn-banner">
+              {t.turnBanner}
+            </Link>
+          )}
+          <h2 id="pick-title">{t.pickTitle}</h2>
+          <p className="muted">{t.pickHint}</p>
+          <ul className="product-cards pick-cards">
+            {state.products.map((p) => (
+              <li key={p.id} className={'product-card' + (p.open > 0 ? ' has-codes' : '')}>
+                <ProductIcon product={p} size={40} />
+                <span className="product-card-name">
+                  {name(p.id)}
+                  {p.official && <span className="official">{VENDOR_STRINGS[lang].official}</span>}
+                </span>
+                <span className="product-card-counts">
+                  <span>
+                    <strong>{p.open}</strong> {t.colCodes}
+                  </span>
+                  <span>
+                    <strong>{p.waiting}</strong> {t.colWaiting}
+                  </span>
+                </span>
+                <span className="pick-actions">
+                  <Link href={`/give?product=${encodeURIComponent(p.id)}`} className="button secondary" onClick={() => track('choose', { path: 'give', product: p.id })}>
+                    {t.cardShare}
+                  </Link>
+                  <Link href={`/get?product=${encodeURIComponent(p.id)}`} className="button primary" onClick={() => track('choose', { path: 'get', product: p.id })}>
+                    {t.cardGet}
+                  </Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="pick-more">
+            <a className="ask-brand" href={ASK_URL} onClick={askBrand}>
+              {t.askBrand}
+            </a>
+            <Link href="/vendor" className="vendor-link">
+              {VENDOR_STRINGS[lang].homeLink}
+            </Link>
+          </p>
+        </section>
       ) : (
         <nav className="tabs">
           <Link href="/get" className={'tab' + (view === 'get' ? ' tab-on' : '')} aria-current={view === 'get' ? 'page' : undefined}>
@@ -329,6 +353,26 @@ export default function QueueView({
       ) : (
         <div className="grid">
           <div className="col">
+
+            {view === 'home' ? (
+              me && <Account me={me} call={call} onSignOut={signOut} />
+            ) : !me ? (
+              <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
+            ) : (
+              <>
+                <Account me={me} call={call} onSignOut={signOut} />
+                {view === 'get' ? (
+                  <>
+                    <Line me={me} products={state.products} call={call} name={name} lang={lang} />
+                    {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
+                  </>
+                ) : (
+                  <Give me={me} products={state.products} call={call} name={name} />
+                )}
+              </>
+            )}
+
+            {view !== 'home' && (
             <section className="card">
               <h2>{t.products}</h2>
               <ul className="product-cards">
@@ -355,23 +399,6 @@ export default function QueueView({
                 {t.askBrand}
               </a>
             </section>
-
-            {view === 'home' ? (
-              me && <Account me={me} call={call} onSignOut={signOut} />
-            ) : !me ? (
-              <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
-            ) : (
-              <>
-                <Account me={me} call={call} onSignOut={signOut} />
-                {view === 'get' ? (
-                  <>
-                    <Line me={me} products={state.products} call={call} name={name} lang={lang} />
-                    {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
-                  </>
-                ) : (
-                  <Give me={me} products={state.products} call={call} name={name} />
-                )}
-              </>
             )}
 
             <section className="card rules">
@@ -401,6 +428,11 @@ export default function QueueView({
       )}
     </main>
   );
+}
+
+function chosenProduct(products: Product[]): string | null {
+  const id = new URLSearchParams(window.location.search).get('product');
+  return id && products.some((p) => p.id === id) ? id : null;
 }
 
 function notify(title: string, body: string) {
@@ -525,7 +557,11 @@ function Line({ me, products, call, name, lang }: { me: Me; products: Product[];
   const [pick, setPick] = useState<string[]>(me.entry?.products ?? []);
   const [ask, setAsk] = useState(false);
   const [now, setNow] = useState(Date.now());
-  useEffect(() => setPick(me.entry?.products ?? (products.length === 1 ? [products[0].id] : [])), [me.entry?.products, products]);
+  useEffect(() => {
+    const chosen = chosenProduct(products);
+    const base = me.entry?.products ?? (products.length === 1 ? [products[0].id] : []);
+    setPick(chosen && !base.includes(chosen) ? [...base, chosen] : base);
+  }, [me.entry?.products, products]);
   useEffect(() => {
     if (!me.entry?.offer) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -664,8 +700,15 @@ function TakenList({ me, call, name }: { me: Me; call: Call; name: (id: string) 
 function Give({ me, products, call, name }: { me: Me; products: Product[]; call: Call; name: (id: string) => string }) {
   const t = useT();
   const [product, setProduct] = useState(products[0]?.id ?? '');
+  useEffect(() => {
+    const chosen = chosenProduct(products);
+    if (chosen) setProduct(chosen);
+  }, [products]);
   const [text, setText] = useState('');
   const [thanks, setThanks] = useState('');
+  const max = products.find((p) => p.id === product)?.uses ?? 1;
+  const [left, setLeft] = useState(max);
+  useEffect(() => setLeft(max), [max]);
   const STATE = { open: t.stateOpen, offered: t.stateOffered, taken: t.stateTaken };
 
   const give = async (e: React.FormEvent) => {
@@ -674,7 +717,7 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
       .split('\n')
       .map((s) => s.trim())
       .filter(Boolean);
-    const res = await call('/codes', { product, codes });
+    const res = await call('/codes', { product, codes, uses: Math.min(left, max) });
     if (res) track('give_codes', { product, count: codes.length });
     if (res) {
       setText('');
@@ -704,10 +747,19 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
             const hosts = products.find((p) => p.id === product)?.hosts ?? [];
             return hosts.length > 0 && <p className="small muted">{t.giveHosts(hosts.join(', '))}</p>;
           })()}
-          {(() => {
-            const uses = products.find((p) => p.id === product)?.uses ?? 1;
-            return uses > 1 && <p className="small muted">{t.giveUses(uses)}</p>;
-          })()}
+          {max > 1 && (
+            <label>
+              <span className="small muted">{t.giveLeft(max)}</span>
+              <select value={left} onChange={(e) => setLeft(Number(e.target.value))}>
+                {Array.from({ length: max }, (_, i) => max - i).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span className="small muted">{t.giveUses(left)}</span>
+            </label>
+          )}
           {me.newGiver && <p className="small muted">{t.giveNewGiver}</p>}
           <label>
             <span className="small muted">{t.giveCodes}</span>
@@ -928,34 +980,3 @@ function useTurnstile(siteKey: string, lang: string) {
 }
 
 export type View = 'home' | 'get' | 'give' | 'vendor';
-
-// The two doors on the first page: a gift for giving, a ticket for getting.
-function ChooseIcon({ kind }: { kind: 'give' | 'get' }) {
-  return (
-    <svg
-      className="choose-icon"
-      viewBox="0 0 24 24"
-      width="40"
-      height="40"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {kind === 'give' ? (
-        <>
-          <rect x="3.5" y="9" width="17" height="11.5" rx="1.8" />
-          <path d="M2.5 9h19M12 9v11.5M12 9C10 5 7 4.6 7.2 7.2 7.3 8.6 9.5 9 12 9zM12 9c2-4 5-4.4 4.8-1.8C16.7 8.6 14.5 9 12 9z" />
-        </>
-      ) : (
-        <>
-          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v2a2 2 0 0 0 0 4v2a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 16v-2a2 2 0 0 0 0-4V8A1.5 1.5 0 0 1 4 6.5z" />
-          <path d="M15.5 7v10" strokeDasharray="1.2 2.4" />
-          <path d="M7 12h5M10 9.5 12.5 12 10 14.5" />
-        </>
-      )}
-    </svg>
-  );
-}
