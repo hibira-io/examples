@@ -3,6 +3,8 @@ import './globals.css';
 import { I18n } from '@/components/I18n';
 import TopBar from '@/components/TopBar';
 import Analytics from '@/components/Analytics';
+import Faq from '@/components/Faq';
+import { FAQ } from '@/lib/faq';
 
 // The hosted copies: demos.hibira.io/examples/invite-queue/ and the one
 // hibira.io serves at /tools/invite-queue/ (DEMO_BASE_PATH picks which).
@@ -22,15 +24,41 @@ export const metadata: Metadata = {
   }),
 };
 
+// Structured data for search engines and AI answer engines: what the page
+// is, and the questions it answers (the zh-TW text the static HTML shows).
+const JSON_LD = SITE && {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebApplication',
+      name: TITLE,
+      url: SITE,
+      description: DESCRIPTION,
+      applicationCategory: 'UtilitiesApplication',
+      operatingSystem: 'Web',
+      inLanguage: ['zh-TW', 'en', 'zh-CN', 'ja', 'ko', 'th', 'vi'],
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      publisher: { '@type': 'Organization', name: 'Hibira', url: 'https://hibira.io/' },
+    },
+    {
+      '@type': 'FAQPage',
+      inLanguage: 'zh-TW',
+      mainEntity: FAQ['zh-TW'].items.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang={SITE ? 'zh-TW' : 'en'}>
       <body>
         <I18n>
           <TopBar />
           {children}
           <Analytics />
         </I18n>
+        <Faq />
+        {JSON_LD && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, '\\u003c') }} />}
       </body>
     </html>
   );
