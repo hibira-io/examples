@@ -47,4 +47,8 @@ export function saveLang(lang: Lang) {
   try {
     localStorage.setItem(KEY, lang);
   } catch {}
+  // Parts rendered outside the language context (the FAQ) follow the menu.
+  window.dispatchEvent(new CustomEvent(LANG_EVENT, { detail: lang }));
 }
+
+export const LANG_EVENT = 'invite-queue-lang';

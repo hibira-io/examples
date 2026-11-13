@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CHANNEL, CLAIM_COOLDOWN_MS, HOLD_MS, InviteQueue, MemoryStorage, STRIKES_BLOCK, USER_CHANNEL_PREFIX } from "../lib/invite-queue.js";
+import { CHANNEL, CLAIM_COOLDOWN_MS, HOLD_MS, InviteQueue, MemoryStorage, NEW_DONOR_MAX_OPEN, STRIKES_BLOCK, USER_CHANNEL_PREFIX } from "../lib/invite-queue.js";
 
 const PRODUCTS = [
   { id: "alpha", name: "Alpha beta" },
   { id: "game", name: "Game playtest" },
+  { id: "cursor", name: "Cursor", hosts: ["cursor.com"] },
 ];
 
 function setup({ storage = new MemoryStorage(), clock = { t: 1_800_000_000_000 } } = {}) {
@@ -143,8 +144,9 @@ test("codes that do not work block their giver", async () => {
   const giver = await signIn("giver@example.com");
   const takers = [];
   for (let i = 0; i < STRIKES_BLOCK; i++) takers.push(await signIn(`t${i}@example.com`));
-  await call("POST", "/codes", { product: "game", codes: ["BAD-0001", "BAD-0002", "BAD-0003", "BAD-0004"] }, giver);
-  for (const t of takers) {
+  for (const [i, t] of takers.entries()) {
+    // A new giver has one code out at a time.
+    assert.equal((await call("POST", "/codes", { product: "game", codes: [`BAD-000${i}`] }, giver)).status, 200);
     await call("POST", "/queue/join", { products: ["game"] }, t);
     const took = await call("POST", "/offer/take", {}, t);
     assert.equal(took.status, 200, JSON.stringify(took.body));
@@ -154,7 +156,6 @@ test("codes that do not work block their giver", async () => {
   }
   const me = (await call("GET", "/state", undefined, giver)).body.me;
   assert.equal(me.blocked, true);
-  assert.equal(me.given.filter((c) => c.state === "open").length, 0, "the rest are withdrawn");
   assert.equal((await call("POST", "/codes", { product: "game", codes: ["MORE-0001"] }, giver)).body.error, "blocked");
   // The person who got a bad code is back in line, without the cooldown.
   const t0 = (await call("GET", "/state", undefined, takers[0])).body.me;
@@ -170,6 +171,35 @@ test("codes must be text or https links", async () => {
   assert.equal((await call("POST", "/codes", { product: "nope", codes: ["ABCD-1234"] }, g)).body.error, "products");
   assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["https://example.com/invite/xyz"] }, g)).status, 200);
   assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["https://example.com/invite/xyz"] }, g)).body.error, "duplicate");
+});
+
+test("a new giver has one code out until one is reported working", async () => {
+  const { call, signIn } = setup();
+  const giver = await signIn("new@example.com");
+  const taker = await signIn("taker@example.com");
+  assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["ONE-0001", "TWO-0002"] }, giver)).body.error, "new_giver");
+  assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["ONE-0001"] }, giver)).status, 200);
+  assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["TWO-0002"] }, giver)).body.error, "new_giver");
+  assert.equal((await call("GET", "/state", undefined, giver)).body.me.newGiver, true);
+  await call("POST", "/queue/join", { products: ["alpha"] }, taker);
+  const took = await call("POST", "/offer/take", {}, taker);
+  await call("POST", "/taken/report", { id: took.body.code.id, works: true }, taker);
+  const me = (await call("GET", "/state", undefined, giver)).body.me;
+  assert.equal(me.newGiver, false);
+  assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["TWO-0002", "THREE-0003", "FOUR-0004"] }, giver)).status, 200);
+  assert.ok(NEW_DONOR_MAX_OPEN < 3);
+});
+
+test("a product's links must be on its own site", async () => {
+  const { call, signIn } = setup();
+  const g = await signIn("g@example.com");
+  assert.equal((await call("POST", "/codes", { product: "cursor", codes: ["https://cursor.com.evil.example/r/x"] }, g)).body.error, "host");
+  assert.equal((await call("POST", "/codes", { product: "cursor", codes: ["https://evil.example/cursor.com"] }, g)).body.error, "host");
+  assert.equal((await call("POST", "/codes", { product: "cursor", codes: ["https://www.cursor.com/referral?code=ABCD1234"] }, g)).status, 200);
+  const g2 = await signIn("g2@example.com");
+  assert.equal((await call("POST", "/codes", { product: "cursor", codes: ["PLAIN-CODE-1"] }, g2)).status, 200);
+  const products = (await call("GET", "/state")).body.products;
+  assert.deepEqual(products.find((p) => p.id === "cursor").hosts, ["cursor.com"]);
 });
 
 test("chat: signed in, slowed down, hidden after reports, admins remove and ban", async () => {

@@ -816,3 +816,49 @@ input[type='checkbox'] {
     font-size: 1.3rem;
   }
 }
+
+/* Questions and answers below the queue, readable without JavaScript. */
+.faq {
+  max-width: 1100px;
+  margin: 8px auto 48px;
+  padding: 0 16px;
+}
+.faq h2 {
+  color: var(--text);
+  font-size: 1.2rem;
+  margin: 0 0 6px;
+}
+.faq > p {
+  margin: 0 0 14px;
+}
+.faq details {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+.faq details:last-child {
+  border-bottom: 1px solid var(--border);
+}
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: '+';
+  color: var(--accent);
+  font-weight: 700;
+}
+.faq details[open] summary::after {
+  content: '−';
+}
+.faq details p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
