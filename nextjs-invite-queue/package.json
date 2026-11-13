@@ -1,0 +1,30 @@
+{
+  "name": "hibira-nextjs-invite-queue",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Queue for invite codes with a live chat room on Hibira: email sign-in, live queue positions, codes offered in turn with a time limit",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "next": "^16.4.3",
+    "pusher": "^5.3.4",
+    "pusher-js": "^8.6.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^5.9.3"
+  },
+  "stackblitz": {
+    "startCommand": "npm run dev"
+  }
+}
