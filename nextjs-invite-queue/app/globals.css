@@ -697,25 +697,75 @@ input[type='checkbox'] {
   color: var(--text);
   font-size: 1rem;
 }
-.ga-notice {
+/* The cookie choice, the same as hibira.io's (Analytics.tsx). */
+.consent {
   position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
-  z-index: 50;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 8px 16px;
   align-items: center;
-  justify-content: space-between;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  justify-content: center;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
-  font-size: 0.9rem;
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.06);
+  animation: consent-in 0.3s ease-out both;
+}
+.consent p {
+  margin: 0;
+  max-width: 640px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.consent-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+@keyframes consent-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+.consent-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(8, 10, 18, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.consent-lock,
+.consent-lock body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+@media (max-width: 560px) {
+  .consent-actions {
+    width: 100%;
+  }
+  .consent-actions button {
+    flex: 1;
+  }
+}
+.site-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 20px;
+  font-size: 0.85rem;
+}
+.site-foot button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
 }
 
 /* The first page: two big doors, give and get. */
