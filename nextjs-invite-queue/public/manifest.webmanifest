@@ -1,0 +1,21 @@
+{
+  "name": "排隊領邀請碼 · Invite code queue",
+  "short_name": "邀請碼排隊",
+  "description": "有多的邀請碼就送人，需要就來排隊。Give spare invite codes, line up for one and chat while you wait.",
+  "lang": "zh-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#faf9f7",
+  "categories": ["utilities", "social"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "我要領碼 · Get a code", "url": "get/" },
+    { "name": "我要分享 · Share a code", "url": "give/" }
+  ]
+}

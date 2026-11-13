@@ -6,8 +6,8 @@ import type { Lang } from './i18n';
 
 export type Faq = { title: string; intro: string; items: [string, string][] };
 
-const BRANDS = 'Claude Code、Sora、Manus、Perplexity、Cursor、Genspark、Lovable';
-const BRANDS_EN = 'Claude Code, Sora, Manus, Perplexity, Cursor, Genspark and Lovable';
+const BRANDS = 'Claude Code、Sora、Manus、Perplexity、Cursor、Genspark、Lovable、Comet、Dia、Kiro、Windsurf、Replit、Bolt、v0、Kling（可靈）、海螺 Hailuo、Suno、ElevenLabs、Warp、Raycast、Granola、Kimi、豆包、Felo';
+const BRANDS_EN = 'Claude Code, Sora, Manus, Perplexity, Cursor, Genspark, Lovable, Comet, Dia, Kiro, Windsurf, Replit, Bolt, v0, Kling, Hailuo, Suno, ElevenLabs, Warp, Raycast, Granola, Kimi, Doubao and Felo';
 
 export const FAQ: Record<Lang, Faq> = {
   en: {
@@ -21,6 +21,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['How do you stop fake codes?', 'Invite links must be on the product\'s own site, so made-up and phishing links are refused. A new giver has one code out at a time until someone says one of their codes worked. Anyone who gets a code that does not work can report it: they go back to the front of the line, and givers whose codes fail three times can no longer give codes.'],
       ['What can I not share?', 'No paid keys, gift cards, accounts or passwords, and no selling, buying or trading.'],
       ['Who runs this page?', 'Hibira, a hosted realtime WebSocket service. The live line, the counters and the chat room run on Hibira channels, and the source code is on GitHub.'],
+      ['Can you add another product?', 'Yes. Tap "Want another product here?" under the invites, or the chat button in the corner, and tell us which one. Once we have checked that the product lets people give its invites away for free, we add it.'],
     ],
   },
   'zh-TW': {
@@ -34,6 +35,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['怎麼防止假碼？', '邀請連結必須是產品官方網址，亂填的網址和釣魚連結會直接擋掉。第一次分享的人一次只能送一組，要有人回報可以用之後才能送更多。領到不能用的碼可以回報，回報的人會回到隊伍最前面；被回報三次的分享者會被停權。'],
       ['哪些東西不能分享？', '付費序號、禮品卡、帳號或密碼都不行，也禁止買賣或交換。'],
       ['這個頁面是誰做的？', 'Hibira，一個即時 WebSocket 託管服務。即時隊伍、人數統計和聊天室都跑在 Hibira 頻道上，原始碼放在 GitHub。'],
+      ['可以加其他品牌嗎？', '可以。點邀請碼種類下面的「想加其他品牌？」，或右下角的聊天按鈕，告訴我們是哪一個。確認那個產品允許免費分享後就會加上。'],
     ],
   },
   'zh-CN': {
@@ -47,6 +49,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['怎么防止假码？', '邀请链接必须是产品官方网址，乱填的网址和钓鱼链接会直接拦下。第一次分享的人一次只能送一个，要有人反馈可以用之后才能送更多。领到不能用的码可以反馈，反馈的人会回到队伍最前面；被反馈三次的分享者会被停用。'],
       ['哪些东西不能分享？', '付费序列号、礼品卡、账号或密码都不行，也禁止买卖或交换。'],
       ['这个页面是谁做的？', 'Hibira，一个实时 WebSocket 托管服务。实时队伍、人数统计和聊天室都运行在 Hibira 频道上，源代码放在 GitHub。'],
+      ['可以加其他品牌吗？', '可以。点邀请码种类下面的「想加其他品牌？」，或右下角的聊天按钮，告诉我们是哪一个。确认那个产品允许免费分享后就会加上。'],
     ],
   },
   ja: {
@@ -60,6 +63,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['偽のコードはどう防いでいますか？', '招待リンクは製品の公式サイトのものに限り、でたらめなリンクやフィッシングリンクは受け付けません。初めて譲る人は 1 件ずつで、使えたと報告されるとまとめて譲れます。使えなかったコードは報告でき、報告した人は列の先頭に戻ります。3 回報告された人はコードを譲れなくなります。'],
       ['譲れないものは？', '有料のキー、ギフトカード、アカウントやパスワード、売買や交換は禁止です。'],
       ['このページは誰が運営していますか？', 'リアルタイム WebSocket のホスティングサービス Hibira です。列、人数、チャットは Hibira のチャンネルで動いていて、ソースコードは GitHub にあります。'],
+      ['ほかのサービスも追加できますか？', 'できます。招待コードの種類の下にある「ほかのサービスも追加してほしい？」か、右下のチャットボタンからお知らせください。無料で譲ることが認められているサービスか確認したうえで追加します。'],
     ],
   },
   ko: {
@@ -73,6 +77,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['가짜 코드는 어떻게 막나요?', '초대 링크는 제품 공식 사이트 주소여야 해서, 지어낸 링크나 피싱 링크는 거부됩니다. 처음 나누는 사람은 한 번에 하나씩만 나눌 수 있고, 작동했다는 응답을 받으면 더 나눌 수 있습니다. 작동하지 않는 코드는 신고할 수 있고, 신고한 사람은 줄 맨 앞으로 돌아갑니다. 세 번 신고된 사람은 더 이상 코드를 나눌 수 없습니다.'],
       ['나눌 수 없는 것은요?', '유료 키, 기프트 카드, 계정이나 비밀번호는 안 되며 판매, 구매, 교환도 금지입니다.'],
       ['이 페이지는 누가 운영하나요?', '실시간 WebSocket 호스팅 서비스 Hibira입니다. 줄, 인원 수, 채팅은 Hibira 채널에서 동작하고 소스 코드는 GitHub에 있습니다.'],
+      ['다른 제품도 추가할 수 있나요?', '네. 초대 코드 종류 아래의 "다른 제품도 추가했으면 하나요?"나 오른쪽 아래 채팅 버튼으로 알려 주세요. 그 제품이 초대를 무료로 나누도록 허용하는지 확인한 뒤 추가합니다.'],
     ],
   },
   th: {
@@ -86,6 +91,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['ป้องกันโค้ดปลอมอย่างไร?', 'ลิงก์เชิญต้องอยู่บนเว็บไซต์ทางการของผลิตภัณฑ์ ลิงก์มั่วและลิงก์ฟิชชิงจะถูกปฏิเสธ ผู้แบ่งปันใหม่ส่งได้ทีละโค้ดจนกว่าจะมีคนบอกว่าใช้ได้ ใครได้โค้ดที่ใช้ไม่ได้แจ้งได้และจะกลับไปหน้าสุดของคิว ผู้ที่ถูกแจ้งสามครั้งจะแบ่งปันโค้ดไม่ได้อีก'],
       ['อะไรที่แบ่งปันไม่ได้?', 'คีย์แบบเสียเงิน บัตรของขวัญ บัญชีหรือรหัสผ่าน และห้ามซื้อขายหรือแลกเปลี่ยน'],
       ['ใครดูแลหน้านี้?', 'Hibira บริการโฮสต์ WebSocket แบบเรียลไทม์ คิว ตัวนับ และห้องแชตทำงานบนช่องของ Hibira และซอร์สโค้ดอยู่บน GitHub'],
+      ['เพิ่มแบรนด์อื่นได้ไหม?', 'ได้ แตะ "อยากให้เพิ่มแบรนด์อื่น?" ใต้ประเภทโค้ดเชิญ หรือปุ่มแชตที่มุมขวาล่าง แล้วบอกเราว่าแบรนด์ไหน เมื่อตรวจแล้วว่าผลิตภัณฑ์นั้นอนุญาตให้แจกคำเชิญฟรี เราจะเพิ่มให้'],
     ],
   },
   vi: {
@@ -99,6 +105,7 @@ export const FAQ: Record<Lang, Faq> = {
       ['Làm sao chặn mã giả?', 'Liên kết mời phải thuộc trang chính thức của sản phẩm, nên liên kết bịa và liên kết lừa đảo bị từ chối. Người mới chỉ tặng từng mã một cho đến khi có người báo mã dùng được. Ai nhận mã không dùng được có thể báo lại và được về đầu hàng; người bị báo ba lần không thể tặng mã nữa.'],
       ['Những gì không được chia sẻ?', 'Không khóa trả phí, thẻ quà tặng, tài khoản hay mật khẩu, và không mua bán hay trao đổi.'],
       ['Ai vận hành trang này?', 'Hibira, dịch vụ WebSocket thời gian thực được lưu trữ. Hàng chờ, bộ đếm và phòng chat chạy trên kênh Hibira, mã nguồn có trên GitHub.'],
+      ['Có thể thêm sản phẩm khác không?', 'Có. Bấm "Muốn thêm sản phẩm khác?" dưới mục loại mã mời, hoặc nút chat ở góc phải dưới, và cho chúng tôi biết sản phẩm nào. Sau khi kiểm tra sản phẩm đó cho phép tặng lời mời miễn phí, chúng tôi sẽ thêm vào.'],
     ],
   },
 };
