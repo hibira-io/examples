@@ -156,7 +156,6 @@ Diagnostic events are written to `storage/logs/diagnostics.log` as one JSON line
 - [docs/integration.md](docs/integration.md): add the approvals packages to your own Laravel app, and which parts are required integration and which are only this demo's business logic.
 - [docs/deployment.md](docs/deployment.md): environment variables, assets, migrations, the worker, HTTPS, Allowed origins, healthchecks and demo-mode limits.
 - [docs/demo-script.md](docs/demo-script.md): a 90-second demo script.
-- [docs/pilot-checklist.md](docs/pilot-checklist.md): onboarding checklist, interview questions and metric definitions for the first pilot users.
 
 ## Versions
 

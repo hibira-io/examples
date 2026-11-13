@@ -139,17 +139,6 @@ Hibira's Channel History (rewind) is an optional feature on paid plans, with the
 
 This demo doesn't depend on it. If you turn it on to cover short disconnects, still go back to the backend for the state when it returns `complete: false`.
 
-## Known upstream limitations
-
-While building this we found the following places where the packages could improve. The demo already handles each one with the extension points above, so you don't need to wait for a package release.
-
-| Package | Today | Smallest suggested fix | How to verify |
-|---|---|---|---|
-| hibira-io/filament-approvals 0.1.1 | `ApprovalDesk::decide()` can overwrite a decision another reviewer just made. The inbox's approve-all / reject-all runs decide and send as two steps, so when two managers click at once the one sent may be the other's decision | `decide()` updates only calls that are undecided or decided by the same user, and reports a conflict for the rest; `decideAll` decides and sends in one locked transaction | Two processes running decideAll at once (the demo's `tests/Concurrency/ConcurrentDecisionsTest.php`) |
-| hibira-io/filament-approvals 0.1.1 | No hook to validate edited arguments, so invalid arguments are only caught when the tool runs | `HibiraApprovals::validateUsing(fn (ToolCall $call, array $arguments): ?string)`, returning an error string at decision time | The demo's `RefundValidationTest` |
-| hibira-io/filament-approvals 0.1.1 | `ResumeAgent` has no `failed()`, so a killed worker leaves the request on resuming | Add `failed()` that marks requests still resuming as failed | The demo's `WorkerCrashTest` |
-| hibira-io/laravel | The AI bridge (`AgentChannel`) is in 0.2, but hibira-io/filament 0.2 still requires hibira-io/laravel ^0.1, so installing it with filament-approvals only gets 0.1.2 | Widen hibira-io/filament to `^0.1\|^0.2` | `composer require hibira-io/filament-approvals hibira-io/laravel:^0.2` resolves |
-
 ## 中文摘要
 
 **必需的整合（共五步）**
@@ -172,5 +161,3 @@ While building this we found the following places where the packages could impro
 - 串流文字有序號，缺號時不拼接，改成重新同步。
 - 斷線重連後一律重新取快照。
 
-**上游限制**
-- 列在上方表格，範例都已經自行處理。
