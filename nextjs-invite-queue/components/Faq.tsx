@@ -6,10 +6,10 @@ import { CONSENT_TEXT } from '@/lib/consent';
 import { GA_ID, OPEN_CONSENT } from './Analytics';
 import { LANG_EVENT, detectLang, type Lang } from '@/lib/i18n';
 
-// Rendered in the static HTML (in zh-TW) so search engines and AI answer
+// Rendered in the static HTML (in English) so search engines and AI answer
 // engines can read it; the browser then shows the visitor's language.
 export default function Faq() {
-  const [lang, setLang] = useState<Lang>('zh-TW');
+  const [lang, setLang] = useState<Lang>('en');
   useEffect(() => {
     setLang(detectLang());
     const follow = (e: Event) => setLang((e as CustomEvent<Lang>).detail);
