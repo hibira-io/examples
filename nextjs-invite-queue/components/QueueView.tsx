@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { useLang, useT } from './I18n';
 import Link from 'next/link';
-import { API, AUTH_URL, SIGNUP_URL, SOURCE_URL, iconUrl } from '@/lib/demo';
+import { track } from './Analytics';
+import { API, AUTH_URL, BASE_PATH, SIGNUP_URL, SOURCE_URL, iconUrl } from '@/lib/demo';
 import type { ErrorCode } from '@/lib/strings';
 
 // The whole page: the line, the email sign-in, giving codes and the chat.
@@ -238,25 +239,34 @@ export default function QueueView({
 
   return (
     <main className="queue">
-      <header className="head">
-        <div>
-          <h1>{t.title}</h1>
-          <p className="muted">{t.subtitle}</p>
+      <header className="hero">
+        <div className="hero-top">
+          <img className="hero-logo" src={`${BASE_PATH}/brand/invite-queue.svg`} alt="" width={64} height={64} />
+          <span className={'status' + (live ? ' status-connected' : '')}>{live ? t.live : t.offline}</span>
         </div>
-        <span className={'status' + (live ? ' status-connected' : '')}>{live ? t.live : t.offline}</span>
+        <h1>{t.title}</h1>
+        <p className="hero-lead">{t.subtitle}</p>
+        <ul className="stats" aria-live="polite">
+          <li>
+            <strong>{t.online(Math.max(online, 1))}</strong>
+          </li>
+          <li>
+            <strong>{t.inLine(state.waiting)}</strong>
+          </li>
+          <li>
+            <strong>{t.served(state.served)}</strong>
+          </li>
+        </ul>
+        <ul className="hero-icons" aria-hidden="true">
+          {state.products
+            .filter((p) => p.icon)
+            .map((p) => (
+              <li key={p.id}>
+                <img src={iconUrl(p.icon)} alt="" width={28} height={28} />
+              </li>
+            ))}
+        </ul>
       </header>
-
-      <ul className="stats" aria-live="polite">
-        <li>
-          <strong>{t.online(Math.max(online, 1))}</strong>
-        </li>
-        <li>
-          <strong>{t.inLine(state.waiting)}</strong>
-        </li>
-        <li>
-          <strong>{t.served(state.served)}</strong>
-        </li>
-      </ul>
 
       <nav className="tabs">
         <Link href="/" className={'tab' + (view === 'get' ? ' tab-on' : '')} aria-current={view === 'get' ? 'page' : undefined}>
@@ -278,26 +288,22 @@ export default function QueueView({
         <div className="col">
           <section className="card">
             <h2>{t.products}</h2>
-            <table className="products">
-              <thead>
-                <tr>
-                  <th>{t.colProduct}</th>
-                  <th className="num">{t.colCodes}</th>
-                  <th className="num">{t.colWaiting}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.products.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <ProductName product={p} name={name} />
-                    </td>
-                    <td className="num">{p.open}</td>
-                    <td className="num">{p.waiting}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul className="product-cards">
+              {state.products.map((p) => (
+                <li key={p.id} className={'product-card' + (p.open > 0 ? ' has-codes' : '')}>
+                  <ProductIcon product={p} size={40} />
+                  <span className="product-card-name">{name(p.id)}</span>
+                  <span className="product-card-counts">
+                    <span>
+                      <strong>{p.open}</strong> {t.colCodes}
+                    </span>
+                    <span>
+                      <strong>{p.waiting}</strong> {t.colWaiting}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
 
           {!me ? (
@@ -332,7 +338,7 @@ export default function QueueView({
             <h2>{t.poweredTitle}</h2>
             <p>{t.poweredBody}</p>
             <p className="actions">
-              <a className="button primary" href={SIGNUP_URL}>
+              <a className="button primary" href={SIGNUP_URL} onClick={() => track('signup_click', { source: 'invite_queue' })}>
                 {t.poweredCta}
               </a>
               <a href={SOURCE_URL}>{t.poweredSource}</a>
@@ -375,6 +381,7 @@ function SignIn({ lang, onDone, run, turnstile }: { lang: string; onDone: (token
     e.preventDefault();
     setBusy(true);
     const res = await run(() => api<{ token: string; me: Me }>('/auth/verify', '', { email, code, lang }));
+    if (res) track('login', { method: 'email_code' });
     setBusy(false);
     if (res) onDone(res.token, res.me);
   };
@@ -493,7 +500,8 @@ function Line({ me, products, call, name, lang }: { me: Me; products: Product[];
   const toggle = (id: string) => setPick((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const join = async () => {
     if (ask && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission().catch(() => {});
-    await call('/queue/join', { products: pick });
+    const joined = await call('/queue/join', { products: pick });
+    if (joined) track('join_queue', { products: pick.join(',') });
   };
   const same = me.entry && pick.length === me.entry.products.length && pick.every((p) => me.entry!.products.includes(p));
 
@@ -599,6 +607,7 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
     e.preventDefault();
     const codes = text.split('\n').map((s) => s.trim()).filter(Boolean);
     const res = await call('/codes', { product, codes });
+    if (res) track('give_codes', { product, count: codes.length });
     if (res) {
       setText('');
       setThanks(t.given(Number(res.added) || codes.length));
@@ -754,11 +763,19 @@ function color(uid: string) {
   return `hsl(${h} 55% 45%)`;
 }
 
-function ProductName({ product, name }: { product: Product; name: (id: string) => string }) {
+function ProductIcon({ product, size }: { product: Product; size: number }) {
   const src = iconUrl(product.icon);
+  return src ? (
+    <img className="product-icon" src={src} alt="" width={size} height={size} />
+  ) : (
+    <span className="product-icon product-dot" style={{ width: size, height: size }} aria-hidden="true" />
+  );
+}
+
+function ProductName({ product, name }: { product: Product; name: (id: string) => string }) {
   return (
     <span className="product-name">
-      {src ? <img src={src} alt="" width={20} height={20} /> : <span className="product-dot" aria-hidden="true" />}
+      <ProductIcon product={product} size={20} />
       <span>{name(product.id)}</span>
     </span>
   );
