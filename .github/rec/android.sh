@@ -3,8 +3,8 @@
 set -x
 OUT=rec-out; mkdir -p $OUT
 A="adb"
-tapText() { # tap the first node whose text or content-desc matches $1
-  for i in $(seq 1 20); do
+tapText() { # tap the first node whose text or content-desc matches $1 (tries $2 times)
+  for i in $(seq 1 ${2:-20}); do
     $A shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; $A pull /sdcard/ui.xml $OUT/ui.xml >/dev/null 2>&1
     b=$(python3 - "$1" <<'PY'
 import re,sys
@@ -32,11 +32,14 @@ $A reverse tcp:3000 tcp:3000
 $A shell am start -a android.intent.action.VIEW -d http://localhost:3000/ com.android.chrome
 sleep 12
 $A exec-out screencap -p > $OUT/01-open.png
-tapText 'Accept|Continue|No thanks|Use without' ; tapText 'No thanks|Got it|Skip' ; sleep 2
+tapText '^Use without an account$' 15; sleep 3
+$A exec-out screencap -p > $OUT/01b-fre.png
+tapText '^(No thanks|Got it|Skip|No, thanks)$' 6; sleep 2; tapText '^(No thanks|Got it|Skip|No, thanks)$' 4; sleep 2
+$A shell am start -a android.intent.action.VIEW -d http://localhost:3000/ com.android.chrome; sleep 8
 $A exec-out screencap -p > $OUT/02-page.png
 tapText 'Turn on order alerts'; sleep 3
 $A exec-out screencap -p > $OUT/03-prompt.png
-tapText '^Allow' ; sleep 6
+tapText '^Allow$' 15; sleep 6
 $A exec-out screencap -p > $OUT/04-on.png
 # Signal ready and record the lock screen until the notification shows (or 9 minutes).
 $A shell input keyevent KEYCODE_HOME; sleep 2
