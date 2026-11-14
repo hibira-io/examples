@@ -1,0 +1,43 @@
+{
+  "name": "排队领邀请码",
+  "short_name": "邀请码排队",
+  "description": "有多余的邀请码就送人，需要就来排队，邀请码按顺序发出。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#faf9f7",
+  "categories": [
+    "utilities",
+    "social"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "排队",
+      "url": "get/"
+    },
+    {
+      "name": "分享",
+      "url": "give/"
+    }
+  ]
+}

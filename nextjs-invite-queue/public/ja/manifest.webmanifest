@@ -1,0 +1,43 @@
+{
+  "name": "招待コード待ち行列",
+  "short_name": "招待コード",
+  "description": "余った招待コードは譲って、欲しい人は列に並ぶだけ。コードは順番に届きます。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#faf9f7",
+  "categories": [
+    "utilities",
+    "social"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "並ぶ",
+      "url": "get/"
+    },
+    {
+      "name": "譲る",
+      "url": "give/"
+    }
+  ]
+}

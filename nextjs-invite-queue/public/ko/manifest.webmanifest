@@ -1,0 +1,43 @@
+{
+  "name": "초대 코드 대기열",
+  "short_name": "초대 코드",
+  "description": "남는 초대 코드는 나눠 주고, 필요하면 줄을 서세요. 코드는 순서대로 전달됩니다.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#faf9f7",
+  "categories": [
+    "utilities",
+    "social"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "줄 서기",
+      "url": "get/"
+    },
+    {
+      "name": "나눠 주기",
+      "url": "give/"
+    }
+  ]
+}

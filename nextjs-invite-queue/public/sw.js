@@ -6,6 +6,10 @@
 
 const CACHE = 'invite-queue-v1';
 const SCOPE = new URL(self.registration.scope).pathname;
+// On hibira.io a language's page has the site's language prefix
+// (/ja/tools/invite-queue/), but its build files are the same ones, under
+// the path without it.
+const BASE = SCOPE.replace(/^\/(zh-tw|zh-cn|ja|ko|th|vi)(?=\/tools\/)/, '');
 
 // The three pages and the build files they load, so the first visit
 // already leaves a shell that opens offline.
@@ -37,11 +41,11 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== location.origin || !url.pathname.startsWith(SCOPE)) return;
+  if (req.method !== 'GET' || url.origin !== location.origin || !(url.pathname.startsWith(SCOPE) || url.pathname.startsWith(BASE))) return;
 
   // Pages: the network first, so a new version shows as soon as it is out;
   // the saved copy when offline.
-  if (req.mode === 'navigate') {
+  if (req.mode === 'navigate' && url.pathname.startsWith(SCOPE)) {
     e.respondWith(
       fetch(req)
         .then((res) => {
