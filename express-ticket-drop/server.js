@@ -33,30 +33,31 @@ app.post('/api/buy', async (req, res) => {
   stats.hit();
   const { ticketId } = req.hibiraPass;
   if (bought.has(ticketId)) return res.status(409).json({ error: 'already_bought' });
+  bought.add(ticketId); // hold the number before any await
   try {
     // Check and take a seat in one step, like UPDATE ... WHERE remaining > 0.
     const got = await db.query((d) => (d.remaining > 0 ? d.remaining-- : 0));
     if (!got) {
+      bought.delete(ticketId);
       stats.soldOut();
-      await soldOut();
+      soldOut();
       return res.status(409).json({ error: 'sold_out' });
     }
-    bought.add(ticketId);
     stats.sold();
-    if (db.peek() === 0) await soldOut();
+    if (db.peek() === 0) soldOut();
     res.json({ ok: true });
   } catch {
+    bought.delete(ticketId);
     stats.error();
     res.status(503).json({ error: 'try_again' });
   }
 });
 
 // Sold out: close the room so the people still in line hear it right away.
-let closed = false;
-async function soldOut() {
-  if (closed) return;
-  closed = true;
-  await hibira.post({ path: `/waiting_rooms/${room}`, body: { state: 'closed', notice: 'Sold out' } });
+let closing = null;
+function soldOut() {
+  closing ??= hibira.post({ path: `/waiting_rooms/${room}`, body: { state: 'closed', notice: 'Sold out' } })
+    .catch((err) => { closing = null; console.error('closing the room failed:', err.message); });
 }
 
 listen(app);
