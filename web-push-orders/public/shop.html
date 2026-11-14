@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kumo Tea</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="shop">
+<header><strong>Kumo Tea</strong><span>Shop</span></header>
+<main>
+  <section class="card product">
+    <div class="art" aria-hidden="true">🍵</div>
+    <h2>Oolong tea, 150 g</h2>
+    <p class="price">NT$440</p>
+    <label>Quantity <select id="qty"><option>1</option><option selected>2</option><option>3</option></select></label>
+    <button id="buy" type="button">Place order</button>
+    <p id="done" class="on" hidden></p>
+  </section>
+</main>
+<script>
+document.querySelector('#buy').addEventListener('click', async () => {
+  const qty = Number(document.querySelector('#qty').value);
+  const order = await fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ item: 'Oolong tea', qty, total: 'NT$' + 440 * qty }),
+  }).then((r) => r.json());
+  const done = document.querySelector('#done');
+  done.textContent = `Thank you! Order #${order.id} is placed.`;
+  done.hidden = false;
+});
+</script>
+</body>
+</html>

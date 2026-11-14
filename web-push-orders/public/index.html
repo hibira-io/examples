@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orders · Kumo Tea</title>
+<link rel="stylesheet" href="/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@hibira-io/push-web@1/dist/push-web.min.js"></script>
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<header><strong>Kumo Tea</strong><span>Orders</span></header>
+<main>
+  <section class="card alerts">
+    <div>
+      <h2>Order alerts</h2>
+      <p>Get a notification for every new order, even when this page is closed.</p>
+    </div>
+    <button id="alerts" type="button">Turn on order alerts</button>
+    <p id="alerts-status" class="on" hidden>On for this browser</p>
+  </section>
+  <section class="card">
+    <h2>Today <span id="count" class="pill">0</span></h2>
+    <ul id="orders"></ul>
+  </section>
+</main>
+</body>
+</html>

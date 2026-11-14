@@ -1,0 +1,11 @@
+{
+  "name": "hibira-web-push-orders",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs"
+  },
+  "dependencies": {
+    "@pusher/push-notifications-server": "1.2.7"
+  }
+}
