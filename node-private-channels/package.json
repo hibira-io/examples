@@ -1,0 +1,13 @@
+{
+  "name": "hibira-private-channels",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs"
+  },
+  "engines": { "node": ">=20.6" },
+  "dependencies": {
+    "pusher": "^5.3.4",
+    "pusher-js": "^8.6.0"
+  }
+}
