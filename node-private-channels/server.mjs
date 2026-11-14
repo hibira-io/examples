@@ -16,7 +16,7 @@ const hibira = new Pusher({
 const orders = {
   1042: { owner: 'alice', name: 'Alice Chen', address: '12 Example Lane, Apt 3', phone: '+1 555 0142' },
 };
-const steps = ['Preparing your order', 'Rider picked it up', 'Rider is 5 minutes away', 'Delivered'];
+const steps = ['preparing', 'picked_up', 'nearby', 'delivered'];
 let step = 0;
 
 // Demo sign-in. In your app, read the user from your session cookie.

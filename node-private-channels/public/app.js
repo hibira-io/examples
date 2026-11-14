@@ -1,3 +1,4 @@
+const ui = window.ui;
 const params = new URLSearchParams(location.search);
 const user = params.get('as') || 'alice';
 const kind = params.get('channel') || 'public';
@@ -22,8 +23,8 @@ const names = {
 };
 const channel = pusher.subscribe(names[kind]);
 
-channel.bind('pusher:subscription_succeeded', () => ui.state('ok', `Subscribed to ${channel.name}`));
-channel.bind('pusher:subscription_error', (error) => ui.state('denied', `Rejected (${error.status}): not your order`));
+channel.bind('pusher:subscription_succeeded', () => ui.subscribed(channel.name));
+channel.bind('pusher:subscription_error', (error) => ui.rejected(error.status));
 channel.bind('status', (order) => ui.order(order));
 
 // What actually travels over the socket, before pusher-js decrypts it.
@@ -31,5 +32,4 @@ pusher.connection.bind('message', (message) => {
   if (message.event === 'status') ui.wire(message.data);
 });
 
-const ui = window.ui;
 ui.init({ user, channelName: names[kind], orderId });
