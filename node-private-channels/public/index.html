@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order tracking · Hibira private channels</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --text:#e8eaf0; --mute:#8b93a7; --ok:#3ecf8e; --bad:#ff5d5d; --accent:#ff4d4f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 Inter, system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:620px; margin:0 auto; padding:20px 16px; display:grid; gap:14px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .who { display:flex; align-items:center; gap:10px; font-weight:600; }
+  .avatar { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-weight:700; background:#2b6cff; }
+  .guest .avatar { background:#6b7280; }
+  .who small { display:block; color:var(--mute); font-weight:400; font-size:12px; }
+  .pill { font:12px ui-monospace, Menlo, monospace; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--mute); }
+  .state { padding:10px 14px; border-radius:10px; border:1px solid var(--line); color:var(--mute); font-size:14px; }
+  .state.ok { border-color:#1f5f45; color:var(--ok); background:#11241c; }
+  .state.denied { border-color:#6b2525; color:var(--bad); background:#2a1414; font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
+  .card h2 { margin:0 0 4px; font-size:13px; color:var(--mute); font-weight:500; text-transform:uppercase; letter-spacing:.06em; }
+  .status { font-size:22px; font-weight:700; margin:2px 0 12px; }
+  dl { display:grid; grid-template-columns:90px 1fr; gap:6px 12px; margin:0; }
+  dt { color:var(--mute); }
+  dd { margin:0; }
+  .empty { color:var(--mute); }
+  .wire { font:12.5px/1.45 ui-monospace, Menlo, monospace; white-space:pre-wrap; word-break:break-all; color:#c7cbe0; min-height:3.2em; margin:0; }
+  .flash { animation:flash .8s ease-out; }
+  @keyframes flash { from { background:#3a2a10; } to { background:transparent; } }
+  button { justify-self:start; font:inherit; font-size:14px; color:var(--text); background:#232836; border:1px solid var(--line); border-radius:8px; padding:7px 14px; cursor:pointer; }
+  button:hover { border-color:var(--mute); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="who" id="who"><span class="avatar" id="avatar"></span><span><span id="whoName"></span><small id="whoSub"></small></span></div>
+    <span class="pill" id="channel"></span>
+  </header>
+  <div class="state" id="state" data-t="connecting"></div>
+  <section class="card">
+    <h2 id="orderTitle"></h2>
+    <div class="status" id="status"><span class="empty" data-t="waiting"></span></div>
+    <dl>
+      <dt data-t="customer"></dt><dd id="name">–</dd>
+      <dt data-t="address"></dt><dd id="address">–</dd>
+      <dt data-t="phone"></dt><dd id="phone">–</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2 data-t="wire"></h2>
+    <pre class="wire" id="wire"><span class="empty" data-t="nothing"></span></pre>
+  </section>
+  <button id="send" type="button" data-t="send"></button>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const lang = new URLSearchParams(location.search).get('lang') || 'en';
+  const T = {
+    en: { alice: 'Alice', guest: 'Another visitor', aliceSub: 'Signed in · owns order #', guestSub: 'Not signed in · changed the URL', order: 'Order #', waiting: 'Waiting for an update…', customer: 'Customer', address: 'Address', phone: 'Phone', wire: 'Received over the WebSocket', nothing: 'Nothing yet', send: 'Send an order update', connecting: 'Connecting…', ok: 'Subscribed to ', denied: (s) => `Rejected (${s}): not your order`, preparing: 'Preparing your order', picked_up: 'Rider picked it up', nearby: 'Rider is 5 minutes away', delivered: 'Delivered' },
+    'zh-TW': { alice: 'Alice', guest: '另一位訪客', aliceSub: '已登入 · 訂單 #', guestSub: '未登入 · 改了網址', order: '訂單 #', waiting: '等待更新…', customer: '顧客', address: '地址', phone: '電話', wire: 'WebSocket 收到的內容', nothing: '尚未收到', send: '送出訂單更新', connecting: '連線中…', ok: '已訂閱 ', denied: (s) => `已拒絕（${s}）：不是你的訂單`, preparing: '餐點準備中', picked_up: '外送員已取餐', nearby: '外送員 5 分鐘內抵達', delivered: '已送達' },
+    ja: { alice: 'Alice', guest: '別の訪問者', aliceSub: 'ログイン中 · 注文 #', guestSub: '未ログイン · URL を変更', order: '注文 #', waiting: '更新を待っています…', customer: 'お客様', address: '住所', phone: '電話', wire: 'WebSocket で受信した内容', nothing: 'まだありません', send: '注文の更新を送信', connecting: '接続中…', ok: '購読中 ', denied: (s) => `拒否（${s}）：あなたの注文ではありません`, preparing: '注文を準備中', picked_up: '配達員が受け取りました', nearby: '配達員はあと 5 分で到着', delivered: '配達済み' },
+  }[lang] || {};
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = T[el.dataset.t]; });
+  const flash = (el) => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); };
+  window.ui = {
+    init({ user, channelName, orderId }) {
+      const alice = user === 'alice';
+      $('who').classList.toggle('guest', !alice);
+      $('avatar').textContent = alice ? 'A' : '?';
+      $('whoName').textContent = alice ? T.alice : T.guest;
+      $('whoSub').textContent = alice ? T.aliceSub + orderId : T.guestSub;
+      $('channel').textContent = channelName;
+      $('orderTitle').textContent = T.order + orderId;
+      $('send').onclick = () => fetch('/orders/1042/update', { method: 'POST' });
+    },
+    state(kind, text) { $('state').className = 'state ' + kind; $('state').textContent = text; },
+    subscribed(name) { this.state('ok', T.ok + name); },
+    rejected(status) { this.state('denied', T.denied(status)); },
+    order(o) {
+      $('status').textContent = T[o.status] || o.status;
+      $('name').textContent = o.name; $('address').textContent = o.address; $('phone').textContent = o.phone;
+      flash($('status').parentElement);
+    },
+    wire(data) {
+      let value = data;
+      if (typeof value === 'string') { try { value = JSON.parse(value); } catch {} }
+      const text = typeof value === 'string' ? value : JSON.stringify(value, null, 1);
+      $('wire').textContent = text; flash($('wire'));
+    },
+  };
+</script>
+<script src="/pusher.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

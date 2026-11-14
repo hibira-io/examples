@@ -1,0 +1,22 @@
+{
+  "name": "hibira-express-ticket-drop",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A ticket drop that survives a rush: a load test floods a shop and oversells it, then the same flood goes through a Hibira waiting room",
+  "scripts": {
+    "before": "node before.js",
+    "start": "node server.js",
+    "room": "node scripts/create-room.js",
+    "flood": "node scripts/flood.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@hibira-io/waiting-room": "^0.1.0",
+    "express": "^5.1.0",
+    "pusher": "^5.3.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
