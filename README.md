@@ -24,6 +24,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 | [open-webui-tool](open-webui-tool) | Open WebUI, Python | A tool that lets the model hand Live Chat conversations to a person, send push notifications and ask a person to approve before it acts | Paste into Workspace → Tools |
 | [phaser-lobby](phaser-lobby) | Phaser 4, Vite, @hibira-io/lobby | The nextjs-lobby game in Phaser: rooms, chat, game events in a canvas, cross-play with browser and Godot players | `npm run dev` |
 | [react-native-push](react-native-push) | Expo, expo-notifications | iOS and Android push: device registration, topics, signed-in users | Development build on a phone |
+| [web-push-orders](web-push-orders) | Node.js, @hibira-io/push-web | Order alerts for a shop: the browser registers for push, the server publishes one notification per order that arrives with the page closed (and reaches iOS/Android apps on the same interest) | `npm start` |
 
 The Next.js examples also deploy to Netlify (button in each README),
 Render (`render.yaml`, nextjs-dashboard) and Zeabur (`deploy/zeabur/`).
