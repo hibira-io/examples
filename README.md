@@ -6,6 +6,7 @@ messaging and push notifications. Each one runs with a free Hibira app
 
 | Example | Stack | Shows | Try it |
 |---|---|---|---|
+| [express-ticket-drop](express-ticket-drop) | Express 5, @hibira-io/waiting-room | A ticket drop under a 3,000-buyer load test: a plain checkout oversells and times out, the same rush behind a waiting room sells exactly the seats on sale | `npm start` + `npm run flood` |
 | [godot-lobby](godot-lobby) | Godot 4, GDScript | The nextjs-lobby game in Godot, with the Hibira addon for Godot: rooms, chat, game events, cross-play with browser players | Open in Godot |
 | [laravel-ai-approvals](laravel-ai-approvals) | Laravel 13, Filament 5, Laravel AI SDK, PostgreSQL | An AI support agent asks for a refund; two managers see it live with presence, approve, edit or reject; the agent resumes from the queue and the customer sees the result | `php artisan serve` + `php artisan queue:work`, or `docker compose up` |
 | [laravel-chat](laravel-chat) | Laravel 13, Echo, Vite | Presence rooms, broadcast events, typing indicators with client events | `php artisan serve` |
