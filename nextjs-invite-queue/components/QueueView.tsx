@@ -32,7 +32,7 @@ type Product = {
 };
 type Message = { id: number; uid: string; name: string; text: string; at: number };
 type Taken = { id: number; product: string; value: string; takenAt: number; report: 'ok' | 'bad' | null; canReport: boolean };
-type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null; uses?: number; taken?: number };
+type Given = { id: number; product: string; state: 'open' | 'offered' | 'taken'; at: number; report: 'ok' | 'bad' | null; uses?: number; taken?: number; offered?: number };
 type Me = {
   uid: string;
   email: string;
@@ -796,7 +796,7 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
               <li key={c.id} className="row between small">
                 <span>
                   {name(c.product)} · {STATE[c.state]}
-                  {(c.uses ?? 1) > 1 && ` · ${t.givenTaken(c.taken ?? 0, c.uses ?? 1)}`}
+                  {(c.uses ?? 1) > 1 && ` · ${t.givenTaken((c.offered ?? 0) + (c.taken ?? 0), c.taken ?? 0, c.uses ?? 1)}`}
                   {c.report && ` · ${c.report === 'ok' ? t.reportOk : t.reportBad}`}
                 </span>
                 {c.state === 'open' && (

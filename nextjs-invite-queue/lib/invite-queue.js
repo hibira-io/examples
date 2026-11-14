@@ -434,6 +434,7 @@ export class InviteQueue {
       at: cs[0].at,
       report: cs.some((c) => c.report === "bad") ? "bad" : cs.some((c) => c.report === "ok") ? "ok" : null,
       uses: cs.length,
+      offered: cs.filter((c) => c.state === "offered").length,
       taken: cs.filter((c) => c.state === "taken").length,
     }));
     given.sort((a, b) => b.at - a.at || b.id - a.id);
