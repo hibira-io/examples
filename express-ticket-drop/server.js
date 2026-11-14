@@ -26,7 +26,7 @@ app.use(['/drop', '/api/buy'], expressWaitingRoom({
   host: process.env.HIBIRA_WAIT_HOST, // leave unset for ws.hibira.io
 }));
 
-app.get('/drop', (req, res) => res.sendFile(page('drop.html')));
+app.get('/drop', page('drop.html'));
 
 const bought = new Set();
 app.post('/api/buy', async (req, res) => {

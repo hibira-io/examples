@@ -1,6 +1,6 @@
 // The parts both versions share: the pages and the monitor's numbers.
 import express from 'express';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { createDb } from './db.js';
 import { createStats } from './stats.js';
 
@@ -10,9 +10,13 @@ export function createShop() {
   const stats = createStats(seats);
   const app = express();
   app.use(express.json());
-  const page = (name) => fileURLToPath(new URL(`../public/${name}`, import.meta.url));
+  // Pages are read once at start, so no request touches the disk.
+  const page = (name) => {
+    const html = readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8');
+    return (req, res) => res.type('html').send(html);
+  };
   app.get('/', (req, res) => res.redirect('/drop'));
-  app.get('/monitor', (req, res) => res.sendFile(page('monitor.html')));
+  app.get('/monitor', page('monitor.html'));
   app.get('/api/stats', (req, res) =>
     res.json(stats.snapshot({ remaining: db.peek(), mode: app.locals.mode, waitStatus: app.locals.waitStatus, ...db.load() })));
   return { app, db, stats, seats, page };

@@ -5,7 +5,7 @@ import { createShop, listen } from './lib/app.js';
 const { app, db, stats, page } = createShop();
 app.locals.mode = 'before';
 
-app.get('/drop', (req, res) => res.sendFile(page('drop.html')));
+app.get('/drop', page('drop.html'));
 
 app.post('/api/buy', async (req, res) => {
   stats.hit();
