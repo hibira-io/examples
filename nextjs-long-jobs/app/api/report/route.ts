@@ -11,6 +11,8 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   const { lang } = await request.json();
   const id = crypto.randomUUID();
-  after(() => streamToChannel(hibira(), REPORTS_CHANNEL, buildReport(lang), { id }));
+  after(() =>
+    streamToChannel(hibira(), REPORTS_CHANNEL, buildReport(lang), { id }),
+  );
   return Response.json({ id }, { status: 202 });
 }
