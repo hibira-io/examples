@@ -210,9 +210,12 @@ test("a code several people can use goes to each of them once", async () => {
   assert.equal((await call("GET", "/state")).body.products.find((p) => p.id === "pass").open, 3);
   let me = (await call("GET", "/state", undefined, giver)).body.me;
   assert.equal(me.given.length, 1);
-  assert.deepEqual([me.given[0].uses, me.given[0].taken, me.given[0].state], [3, 0, "open"]);
+  assert.deepEqual([me.given[0].uses, me.given[0].taken, me.given[0].offered, me.given[0].state], [3, 0, 0, "open"]);
   // The first person takes one place and cannot be offered another.
   await call("POST", "/queue/join", { products: ["pass"] }, people[0]);
+  // The giver sees the place that was sent before anyone takes it.
+  me = (await call("GET", "/state", undefined, giver)).body.me;
+  assert.deepEqual([me.given[0].offered, me.given[0].taken], [1, 0]);
   const first = await call("POST", "/offer/take", {}, people[0]);
   assert.equal(first.body.code.value, "https://example.com/pass/abc");
   await call("POST", "/queue/join", { products: ["pass"] }, people[1]);
@@ -220,7 +223,7 @@ test("a code several people can use goes to each of them once", async () => {
   for (const p of [people[1], people[2]]) assert.equal((await call("GET", "/state", undefined, p)).body.me.entry.state, "offered");
   await call("POST", "/offer/take", {}, people[1]);
   me = (await call("GET", "/state", undefined, giver)).body.me;
-  assert.deepEqual([me.given[0].taken, me.given[0].state], [2, "offered"]);
+  assert.deepEqual([me.given[0].taken, me.given[0].offered, me.given[0].state], [2, 1, "offered"]);
   // One "did not work" takes the rest off the queue and counts once.
   await call("POST", "/taken/report", { id: first.body.code.id, works: false }, people[0]);
   await call("POST", "/offer/take", {}, people[2]);
