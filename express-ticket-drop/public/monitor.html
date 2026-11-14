@@ -40,6 +40,7 @@ canvas{width:100%;height:9rem;display:block}
 <script>
 const $ = (id) => document.getElementById(id), n = (x) => x.toLocaleString('en-US');
 const hist = [];
+let lastWait = 0; // the line's status is cached for 2 s, so ask no more often
 async function tick() {
   let s; try { s = await (await fetch('/api/stats')).json(); } catch { return; }
   $('mode').textContent = s.mode === 'after' ? 'With Hibira waiting room' : 'No waiting room';
@@ -55,7 +56,8 @@ async function tick() {
   if (s.oversold) { b.className = 'bad'; b.textContent = 'Oversold by ' + n(s.oversold) + ' seats'; }
   else if (s.sold && s.sold === s.seats) { b.className = 'ok'; b.textContent = 'Sold out: exactly ' + n(s.seats) + ' seats, none oversold'; }
   else b.className = '';
-  if (s.waitStatus) {
+  if (s.waitStatus && Date.now() - lastWait > 2000) {
+    lastWait = Date.now();
     try {
       const w = await (await fetch(s.waitStatus, { cache: 'no-store' })).json();
       $('queue').style.display = 'block';
