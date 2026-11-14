@@ -12,7 +12,7 @@ x=open('rec-out/ui.xml',encoding='utf-8').read()
 for m in re.finditer(r'<node [^>]*>',x):
     n=m.group(0)
     t=re.search(r' text="([^"]*)"',n).group(1); d=re.search(r'content-desc="([^"]*)"',n).group(1)
-    if re.search(sys.argv[1],t+' '+d,re.I):
+    if re.search(sys.argv[1],t,re.I) or re.search(sys.argv[1],d,re.I):
         a=list(map(int,re.findall(r'\d+',re.search(r'bounds="([^"]*)"',n).group(1))));print((a[0]+a[2])//2,(a[1]+a[3])//2);break
 PY
 )
@@ -46,7 +46,7 @@ $A shell input keyevent KEYCODE_HOME; sleep 2
 $A shell input keyevent KEYCODE_SLEEP; sleep 2; $A shell input keyevent KEYCODE_WAKEUP; sleep 2
 $A exec-out screencap -p > $OUT/05-lock.png
 git config user.name rec-bot; git config user.email rec-bot@users.noreply.github.com
-date -u +%s > .github/rec/ready; git add .github/rec/ready; git commit -qm "rec: android ready [skip ci]"; git push -q origin HEAD:${GITHUB_REF_NAME} || true
+date -u +%s > .github/rec/ready; git add .github/rec/ready; git commit -qm "rec: android ready [skip ci]"; for i in 1 2 3 4; do git pull -q --rebase origin ${GITHUB_REF_NAME} && git push -q origin HEAD:${GITHUB_REF_NAME} && break; sleep 3; done
 for part in 1 2 3; do
   $A shell screenrecord --time-limit 180 --bit-rate 8000000 /sdcard/rec$part.mp4 &
   RP=$!
