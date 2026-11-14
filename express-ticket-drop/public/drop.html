@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Winter tour presale</title>
+<style>
+:root{--ink:#16161a;--mute:#6b6b76;--line:#e6e4ef;--bg:#f6f5fb;--accent:#4f46e5;--ok:#12805c;--bad:#c2312f}
+*{box-sizing:border-box;margin:0}
+body{font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+header{padding:18px 24px;font-weight:800;letter-spacing:.02em;border-bottom:1px solid var(--line);background:#fff}
+main{flex:1;display:grid;place-items:center;padding:24px}
+.card{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(22,22,26,.08)}
+.art{height:150px;background:linear-gradient(135deg,#312e81,#4f46e5 55%,#a78bfa);color:#fff;padding:22px;display:flex;flex-direction:column;justify-content:flex-end}
+.art small{opacity:.8;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.art b{font-size:26px;line-height:1.2}
+.body{padding:22px;display:grid;gap:16px}
+.row{display:flex;justify-content:space-between;align-items:baseline}
+.left{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+button{font:inherit;font-weight:700;font-size:18px;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+#msg{min-height:24px;font-weight:700}
+#msg.ok{color:var(--ok)}#msg.bad{color:var(--bad)}
+</style></head><body>
+<header>Winter tour · presale</header>
+<main><div class="card">
+  <div class="art"><small>Dec 4 · Main hall</small><b>Winter tour 2026</b></div>
+  <div class="body">
+    <div class="row"><span>Seats left</span><span class="left" id="left">…</span></div>
+    <button id="buy">Buy a seat · $49</button>
+    <div id="msg"></div>
+  </div>
+</div></main>
+<script>
+const left = document.getElementById('left'), msg = document.getElementById('msg'), buy = document.getElementById('buy');
+async function poll() {
+  try { const s = await (await fetch('/api/stats')).json(); left.textContent = Math.max(0, s.remaining).toLocaleString(); } catch {}
+}
+poll(); setInterval(poll, 700);
+buy.onclick = async () => {
+  buy.disabled = true; msg.className = ''; msg.textContent = 'Reserving…';
+  const r = await fetch('/api/buy', { method: 'POST' });
+  const j = await r.json().catch(() => ({}));
+  if (r.ok) { msg.className = 'ok'; msg.textContent = 'Seat secured. See you on Dec 4!'; }
+  else { msg.className = 'bad'; msg.textContent = j.error === 'sold_out' ? 'Sold out.' : j.error === 'already_bought' ? 'You already have a seat.' : 'Something went wrong. Try again.'; buy.disabled = false; }
+  poll();
+};
+</script></body></html>
