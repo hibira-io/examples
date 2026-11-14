@@ -163,6 +163,12 @@ export default function QueueView({
 
   const uid = state?.me?.uid;
   const products = state?.products;
+  // A brand picked on the first page (?product=) is the one this page is
+  // about: show it instead of every brand again.
+  const [chosen, setChosen] = useState<string | null>(null);
+  useEffect(() => {
+    setChosen(products && view !== 'home' ? chosenProduct(products) : null);
+  }, [products, view]);
   useEffect(() => {
     if (!uid || !pusher) return;
     const name = `private-invite-queue-${uid}`;
@@ -241,9 +247,11 @@ export default function QueueView({
     return p?.names?.[lang] || p?.name || id;
   };
 
+  const chosenP = chosen ? state.products.find((p) => p.id === chosen) : undefined;
+
   return (
     <main className="queue">
-      <header className="hero">
+      <header className={'hero' + (view === 'home' ? '' : ' hero-compact')}>
         <HeroGlobe />
         <div className="hero-top">
           <img className="hero-logo" src={`${BASE_PATH}/brand/invite-queue.svg`} alt="" width={64} height={64} />
@@ -261,15 +269,6 @@ export default function QueueView({
           <li>
             <strong>{t.served(state.served)}</strong>
           </li>
-        </ul>
-        <ul className="hero-icons" aria-hidden="true">
-          {state.products
-            .filter((p) => p.icon)
-            .map((p) => (
-              <li key={p.id}>
-                <img src={iconUrl(p.icon)} alt="" width={28} height={28} />
-              </li>
-            ))}
         </ul>
       </header>
 
@@ -360,10 +359,41 @@ export default function QueueView({
             {view === 'home' ? (
               me && <Account me={me} call={call} onSignOut={signOut} />
             ) : !me ? (
-              <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
+              <>
+                {chosenP && (
+                  <section className="card chosen" aria-labelledby="chosen-title">
+                    <div className="chosen-head">
+                      <h2 id="chosen-title">{t.chosenTitle}</h2>
+                      <Link href="/" className="chosen-change" title={t.changeBrand} aria-label={t.changeBrand}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
+                        </svg>
+                      </Link>
+                    </div>
+                    <div className="chosen-row">
+                      <ProductIcon product={chosenP} size={40} />
+                      <span className="chosen-main">
+                        <span className="product-card-name">
+                          {name(chosenP.id)}
+                          {chosenP.official && <span className="official">{VENDOR_STRINGS[lang].official}</span>}
+                        </span>
+                        <span className="product-card-rule">{t.cardRule(chosenP.uses ?? 1)}</span>
+                      </span>
+                      <span className="product-card-counts">
+                        <span>
+                          <strong>{chosenP.open}</strong> {t.colCodes}
+                        </span>
+                        <span>
+                          <strong>{chosenP.waiting}</strong> {t.colWaiting}
+                        </span>
+                      </span>
+                    </div>
+                  </section>
+                )}
+                <SignIn lang={lang} onDone={signedIn} run={run} turnstile={turnstile} />
+              </>
             ) : (
               <>
-                <Account me={me} call={call} onSignOut={signOut} />
                 {view === 'get' ? (
                   <>
                     <Line me={me} products={state.products} call={call} name={name} lang={lang} />
@@ -372,10 +402,11 @@ export default function QueueView({
                 ) : (
                   <Give me={me} products={state.products} call={call} name={name} />
                 )}
+                <Account me={me} call={call} onSignOut={signOut} />
               </>
             )}
 
-            {view !== 'home' && (
+            {view !== 'home' && !chosenP && (
             <section className="card">
               <h2>{t.products}</h2>
               <ul className="product-cards">
@@ -635,24 +666,15 @@ function Line({ me, products, call, name, lang }: { me: Me; products: Product[];
             </>
           ) : (
             <div className="stack">
-              <label>
-                <span className="small muted">{t.pickProducts}</span>
-                <select value={pick} onChange={(e) => setPick(e.target.value)}>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {name(p.id)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="field">
+                <span className="small muted" id="line-brand">{t.pickProducts}</span>
+                <BrandPicker products={products} value={pick} onChange={setPick} name={name} labelledBy="line-brand" />
+              </div>
               {waitUntil > 0 ? (
                 <p className="small">{t.cooldown(fmt(waitUntil, true))}</p>
               ) : (
                 <>
-                  <label className="choice small">
-                    <input type="checkbox" checked={ask} onChange={(e) => setAsk(e.target.checked)} />
-                    <span>{t.notifyAsk}</span>
-                  </label>
+                  <Switch checked={ask} onChange={setAsk} label={t.notifyAsk} />
                   <p className="actions">
                     <button className="primary" disabled={!pick} onClick={join}>
                       {t.join}
@@ -748,32 +770,20 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
       ) : (
         <form onSubmit={give} className="stack">
           <p className="small muted">{t.giveHint}</p>
-          <label>
-            <span className="small muted">{t.giveProduct}</span>
-            <select value={product} onChange={(e) => setProduct(e.target.value)}>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {name(p.id)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="field">
+            <span className="small muted" id="give-brand">{t.giveProduct}</span>
+            <BrandPicker products={products} value={product} onChange={setProduct} name={name} labelledBy="give-brand" />
+          </div>
           {(() => {
             const hosts = products.find((p) => p.id === product)?.hosts ?? [];
             return hosts.length > 0 && <p className="small muted">{t.giveHosts(hosts.join(', '))}</p>;
           })()}
           {max > 1 && (
-            <label>
-              <span className="small muted">{t.giveLeft(max)}</span>
-              <select value={left} onChange={(e) => setLeft(Number(e.target.value))}>
-                {Array.from({ length: max }, (_, i) => max - i).map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+            <div className="field">
+              <span className="small muted" id="give-left">{t.giveLeft(max)}</span>
+              <Steps max={max} value={left} onChange={setLeft} labelledBy="give-left" />
               <span className="small muted">{t.giveUses(left)}</span>
-            </label>
+            </div>
           )}
           {me.newGiver && <p className="small muted">{t.giveNewGiver}</p>}
           <label>
@@ -914,6 +924,88 @@ function ProductIcon({ product, size }: { product: Product; size: number }) {
     <img className="product-icon" src={src} alt="" width={size} height={size} />
   ) : (
     <span className="product-icon product-dot" style={{ width: size, height: size }} aria-hidden="true" />
+  );
+}
+
+/** The brand list as a button and a menu with each brand's icon (no native select). */
+function BrandPicker({ products, value, onChange, name, labelledBy }: { products: Product[]; value: string; onChange: (id: string) => void; name: (id: string) => string; labelledBy: string }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const current = products.find((p) => p.id === value);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    box.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+  const move = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = [...(box.current?.querySelectorAll<HTMLElement>('[role="option"]') ?? [])];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    items[Math.max(0, Math.min(items.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+  };
+  return (
+    <div className={'picker' + (open ? ' open' : '')} ref={box}>
+      <button type="button" className="picker-button" aria-haspopup="listbox" aria-expanded={open} aria-labelledby={labelledBy} onClick={() => setOpen((o) => !o)}>
+        {current ? <ProductName product={current} name={name} /> : <span />}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="picker-list" role="listbox" aria-labelledby={labelledBy} onKeyDown={move}>
+          {products.map((p) => (
+            <li
+              key={p.id}
+              role="option"
+              tabIndex={-1}
+              aria-selected={p.id === value}
+              onClick={() => (onChange(p.id), setOpen(false))}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onChange(p.id), setOpen(false))}
+            >
+              <ProductName product={p} name={name} />
+              <span className="small muted">
+                {p.open} {t.colCodes}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** An on/off switch with its label (no native checkbox). */
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (on: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} className="switch-row" onClick={() => onChange(!checked)}>
+      <span className="switch" aria-hidden="true">
+        <span className="switch-knob" />
+      </span>
+      <span className="small">{label}</span>
+    </button>
+  );
+}
+
+/** A number from 1 to max as a row of buttons (no native select). */
+function Steps({ max, value, onChange, labelledBy }: { max: number; value: number; onChange: (n: number) => void; labelledBy: string }) {
+  return (
+    <div className="steps" role="radiogroup" aria-labelledby={labelledBy}>
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+        <button key={n} type="button" role="radio" aria-checked={n === value} className={n === value ? 'on' : ''} onClick={() => onChange(n)}>
+          {n}
+        </button>
+      ))}
+    </div>
   );
 }
 

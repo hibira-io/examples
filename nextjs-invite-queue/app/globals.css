@@ -451,7 +451,8 @@ input[type='checkbox'] {
   list-style: none;
   margin: 0 0 12px;
   padding: 0;
-  height: 420px;
+  min-height: 120px;
+  max-height: 420px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -635,27 +636,27 @@ input[type='checkbox'] {
 .hero .stats li:first-child strong::before {
   background: #4ade80;
 }
-.hero-icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* Under the first page the hero is a short header: the page's own task comes first. */
+.hero-compact {
+  padding: 16px 20px 14px;
 }
-.hero-icons li {
-  display: grid;
-  place-items: center;
+.hero-compact .hero-top {
+  margin-bottom: 8px;
+}
+.hero-compact .hero-logo {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 4px;
 }
-.hero-icons img {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+.hero-compact h1 {
+  font-size: clamp(1.3rem, 3vw, 1.6rem);
+}
+.hero-compact .hero-lead {
+  display: none;
+}
+.hero-compact .stats {
+  margin: 10px 0 0;
 }
 .product-cards {
   display: grid;
@@ -708,7 +709,9 @@ input[type='checkbox'] {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 60;
+  /* Above the support chat's button, which would otherwise sit on top of
+     the choice on a phone. */
+  z-index: 2147483001;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
@@ -739,7 +742,7 @@ input[type='checkbox'] {
 .consent-mask {
   position: fixed;
   inset: 0;
-  z-index: 59;
+  z-index: 2147483000;
   background: rgba(8, 10, 18, 0.55);
   -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
@@ -860,9 +863,6 @@ input[type='checkbox'] {
     font-size: 0.92rem;
     margin-bottom: 12px;
   }
-  .hero-icons {
-    display: none;
-  }
   .choose-button {
     min-height: 96px;
     padding: 18px 20px;
@@ -954,11 +954,6 @@ input[type='checkbox'] {
 }
 .ask-brand:hover {
   text-decoration: underline;
-}
-@media (min-width: 861px) {
-  .hero-icons {
-    max-width: 60%;
-  }
 }
 
 /* Vendors (/vendor) */
@@ -1293,4 +1288,179 @@ a.button.secondary {
 .share-menu > button:focus-visible {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   outline: none;
+}
+
+/* The brand picked on the first page, on the queue and share pages. */
+.chosen-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.chosen-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 140px;
+}
+.chosen .product-card-counts {
+  margin: 0;
+}
+.chosen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.chosen-head h2 {
+  margin: 0;
+}
+.chosen-row {
+  margin-top: 8px;
+}
+.chosen-change {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+}
+.chosen-change:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Custom controls (no native select or checkbox): the brand picker, the
+   on/off switch and the uses-left buttons. */
+.field {
+  display: grid;
+  gap: 4px;
+}
+.picker {
+  position: relative;
+}
+.picker-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-button:hover,
+.picker.open .picker-button {
+  border-color: var(--accent);
+}
+.picker-button svg {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.picker.open .picker-button svg {
+  transform: rotate(180deg);
+}
+.picker-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.25);
+}
+.picker-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+.picker-list li:hover,
+.picker-list li:focus-visible {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.picker-list li[aria-selected='true'] {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 600;
+}
+.switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+.switch-row[aria-checked='true'] .switch {
+  background: var(--accent);
+}
+.switch-row[aria-checked='true'] .switch-knob {
+  transform: translateX(16px);
+}
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.steps button {
+  min-width: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.steps button.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.stack > p {
+  margin: 0;
 }
