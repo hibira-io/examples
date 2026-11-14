@@ -5,6 +5,7 @@ import TopBar from '@/components/TopBar';
 import Analytics from '@/components/Analytics';
 import LiveChat from '@/components/LiveChat';
 import Pwa from '@/components/Pwa';
+import LangPrefix from '@/components/LangPrefix';
 import Faq from '@/components/Faq';
 import { FAQ } from '@/lib/faq';
 
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </I18n>
         <Faq />
         {SITE && <Pwa />}
+        {SITE && <LangPrefix />}
         {JSON_LD && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, '\\u003c') }} />}
       </body>
     </html>

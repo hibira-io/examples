@@ -1,0 +1,43 @@
+{
+  "name": "คิวรับโค้ดเชิญ",
+  "short_name": "โค้ดเชิญ",
+  "description": "มีโค้ดเชิญเหลือก็แบ่งปัน อยากได้ก็มาต่อคิว โค้ดจะส่งให้ตามลำดับ",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#faf9f7",
+  "categories": [
+    "utilities",
+    "social"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ต่อคิว",
+      "url": "get/"
+    },
+    {
+      "name": "แบ่งปัน",
+      "url": "give/"
+    }
+  ]
+}
