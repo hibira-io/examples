@@ -2,6 +2,7 @@
 
 import { DEMO_API, HIBIRA_URL, SOURCE_URL } from '@/lib/demo';
 import { LangMenu, useT } from './I18n';
+import ShareLink from './ShareLink';
 
 // Hibira's ripple mark (hibira.io/portal/brand/favicon.svg), drawn inline so
 // it follows the theme's accent color.
@@ -34,6 +35,7 @@ export default function TopBar() {
       )}
       <span className="topbar-links">
         {DEMO_API && <a href={SOURCE_URL}>{t.source}</a>}
+        {DEMO_API && <ShareLink campaign="games" />}
         <LangMenu />
       </span>
     </nav>

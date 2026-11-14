@@ -30,6 +30,14 @@
       .lang li { padding: 7px 10px; border-radius: 7px; cursor: pointer; }
       .lang li:hover, .lang li:focus { background: color-mix(in srgb, var(--accent) 10%, transparent); outline: none; }
       .lang li[aria-selected='true'] { color: var(--accent); font-weight: 600; }
+      .navr { display: flex; align-items: center; gap: 10px; }
+      .share { position: relative; }
+      .share > button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+      .share > button:hover, .share.open > button { color: var(--accent); border-color: var(--accent); }
+      .share .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; display: none; min-width: 170px; padding: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(17, 17, 16, 0.14); }
+      .share.open .menu { display: grid; }
+      .share .menu a, .share .menu button { display: block; padding: 7px 10px; font: inherit; font-weight: 400; text-align: left; color: var(--text); background: none; border: 0; border-radius: 7px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+      .share .menu a:hover, .share .menu button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
       h1 { font-size: 1.8em; margin: 32px 0 8px; }
       .muted { color: var(--muted); }
       .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
@@ -49,9 +57,22 @@
     <main>
       <nav>
         <a id="home" href="https://hibira.io/?utm_source=github&amp;utm_medium=demo&amp;utm_campaign=examples&amp;utm_content=index" class="brand"><img src="https://hibira.io/portal/brand/favicon.svg" alt="" width="24" height="24" />Hibira</a>
+        <div class="navr">
+        <div class="share" id="share">
+          <button type="button" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg></button>
+          <div class="menu" role="menu">
+            <button type="button" role="menuitem" data-share="copy"></button>
+            <a role="menuitem" data-share="x" target="_blank" rel="noopener noreferrer">X</a>
+            <a role="menuitem" data-share="facebook" target="_blank" rel="noopener noreferrer">Facebook</a>
+            <a role="menuitem" data-share="line" target="_blank" rel="noopener noreferrer">LINE</a>
+            <a role="menuitem" data-share="threads" target="_blank" rel="noopener noreferrer">Threads</a>
+            <button type="button" role="menuitem" data-share="native" hidden></button>
+          </div>
+        </div>
         <div class="lang" id="lang">
           <button type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Language"><span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
           <ul role="listbox" aria-label="Language"></ul>
+        </div>
         </div>
       </nav>
       <h1 data-t="title"></h1>
@@ -415,6 +436,75 @@
         if (!menu.contains(e.target)) open(false);
       });
       apply(detect());
+
+      // A quick share link: copy this page's address, or post it, with UTM
+      // tags per channel (the same menu as the demos' top bar, ShareLink.tsx).
+      const SHARE = {
+        en: ['Share this page', 'Copy link', 'Link copied', 'More…'],
+        'zh-TW': ['分享這個頁面', '複製連結', '已複製連結', '更多…'],
+        'zh-CN': ['分享这个页面', '复制链接', '已复制链接', '更多…'],
+        ja: ['このページを共有', 'リンクをコピー', 'リンクをコピーしました', 'その他…'],
+        ko: ['이 페이지 공유', '링크 복사', '링크를 복사했어요', '더 보기…'],
+        th: ['แชร์หน้านี้', 'คัดลอกลิงก์', 'คัดลอกลิงก์แล้ว', 'เพิ่มเติม…'],
+        vi: ['Chia sẻ trang này', 'Sao chép liên kết', 'Đã sao chép liên kết', 'Thêm…'],
+      };
+      const share = document.getElementById('share');
+      const shareToggle = share.querySelector(':scope > button');
+      function shareUrl(source) {
+        const u = new URL(location.href);
+        for (const k of [...u.searchParams.keys()]) if (k.startsWith('utm_') || k === 'lang') u.searchParams.delete(k);
+        u.hash = '';
+        u.searchParams.set('utm_source', source);
+        u.searchParams.set('utm_medium', 'share');
+        u.searchParams.set('utm_campaign', 'demos');
+        return u.toString();
+      }
+      function shareLabels() {
+        const t = SHARE[document.documentElement.lang] || SHARE.en;
+        shareToggle.setAttribute('aria-label', t[0]);
+        shareToggle.title = t[0];
+        share.querySelector('[data-share="copy"]').textContent = t[1];
+        share.querySelector('[data-share="native"]').textContent = t[3];
+        const text = document.title, link = (s) => encodeURIComponent(shareUrl(s));
+        share.querySelector('[data-share="x"]').href = 'https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + link('x');
+        share.querySelector('[data-share="facebook"]').href = 'https://www.facebook.com/sharer/sharer.php?u=' + link('facebook');
+        share.querySelector('[data-share="line"]').href = 'https://social-plugins.line.me/lineit/share?url=' + link('line');
+        share.querySelector('[data-share="threads"]').href = 'https://www.threads.net/intent/post?text=' + encodeURIComponent(text + ' ' + shareUrl('threads'));
+      }
+      share.querySelector('[data-share="native"]').hidden = typeof navigator.share !== 'function';
+      shareToggle.addEventListener('click', () => {
+        shareLabels();
+        const on = !share.classList.contains('open');
+        share.classList.toggle('open', on);
+        shareToggle.setAttribute('aria-expanded', String(on));
+      });
+      share.querySelector('[data-share="copy"]').addEventListener('click', async (e) => {
+        const url = shareUrl('copy');
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          const area = document.createElement('textarea');
+          area.value = url;
+          document.body.appendChild(area);
+          area.select();
+          document.execCommand('copy');
+          area.remove();
+        }
+        const t = SHARE[document.documentElement.lang] || SHARE.en;
+        e.target.textContent = t[2];
+        setTimeout(() => (e.target.textContent = t[1]), 2000);
+      });
+      share.querySelector('[data-share="native"]').addEventListener('click', () => {
+        navigator.share({ title: document.title, url: shareUrl('native') }).catch(() => {});
+      });
+      for (const a of share.querySelectorAll('a')) a.addEventListener('click', () => share.classList.remove('open'));
+      document.addEventListener('click', (e) => {
+        if (!share.contains(e.target)) share.classList.remove('open');
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') share.classList.remove('open');
+      });
+      shareLabels();
 
       // The previews are short muted clips (pages/gallery, recorded with
       // scripts/gallery): each loads when its card scrolls into view and
