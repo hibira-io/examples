@@ -6,8 +6,8 @@ import type { Lang } from './i18n';
 
 export type Faq = { title: string; intro: string; items: [string, string][] };
 
-const BRANDS = 'Claude Code、Sora、Genspark、Lovable、Windsurf、Replit、Bolt、Kling（可靈）、海螺 Hailuo、Suno、ElevenLabs、Warp、Raycast、Granola、Kimi、豆包、Felo';
-const BRANDS_EN = 'Claude Code, Sora, Genspark, Lovable, Windsurf, Replit, Bolt, Kling, Hailuo, Suno, ElevenLabs, Warp, Raycast, Granola, Kimi, Doubao and Felo';
+const BRANDS = 'Claude Code、Sora、Genspark、Lovable、Windsurf、Replit、Bolt、Kling（可靈）、海螺 Hailuo、Suno、ElevenLabs、Warp、Raycast、Granola、Kimi、豆包、Felo、Tripo';
+const BRANDS_EN = 'Claude Code, Sora, Genspark, Lovable, Windsurf, Replit, Bolt, Kling, Hailuo, Suno, ElevenLabs, Warp, Raycast, Granola, Kimi, Doubao, Felo and Tripo';
 
 export const FAQ: Record<Lang, Faq> = {
   en: {
