@@ -210,11 +210,18 @@ export default function QueueView({
     [t, load],
   );
 
+  const pending = useRef(new Set<string>());
   const call = useCallback(
     async (path: string, body: unknown = {}) => {
-      const res = await run(() => api<{ me?: Me } & Record<string, unknown>>(path, tokenRef.current, body));
-      if (res?.me) setState((s) => (s ? { ...s, me: res.me! } : s));
-      return res;
+      if (pending.current.has(path)) return undefined;
+      pending.current.add(path);
+      try {
+        const res = await run(() => api<{ me?: Me } & Record<string, unknown>>(path, tokenRef.current, body));
+        if (res?.me) setState((s) => (s ? { ...s, me: res.me! } : s));
+        return res;
+      } finally {
+        pending.current.delete(path);
+      }
     },
     [run],
   );
@@ -488,19 +495,26 @@ function SignIn({ lang, onDone, run, turnstile }: { lang: string; onDone: (token
   const human = useTurnstile(turnstile, lang);
   const waiting = human.on && !human.token;
 
+  const inFlight = useRef(false);
   const send = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     const ok = await run(() => api('/auth/start', '', { email, lang, human: human.token || undefined }));
+    inFlight.current = false;
     setBusy(false);
     human.reset();
     if (ok) setSent(true);
   };
   const verify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     const res = await run(() => api<{ token: string; me: Me }>('/auth/verify', '', { email, code, lang }));
     if (res) track('login', { method: 'email_code' });
+    inFlight.current = false;
     setBusy(false);
     if (res) onDone(res.token, res.me);
   };

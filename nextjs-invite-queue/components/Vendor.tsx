@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLang, useT } from './I18n';
 import { api, ApiError } from '@/lib/api';
 import { API, iconUrl } from '@/lib/demo';
@@ -40,8 +40,11 @@ export default function VendorPanel({ token, listed }: { token: string; listed: 
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState<{ label: string; value: string } | null>(null);
 
+  const inFlight = useRef(false);
   const run = useCallback(
     async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
+      if (inFlight.current) return undefined;
+      inFlight.current = true;
       setError('');
       setNote('');
       setBusy(true);
@@ -55,6 +58,7 @@ export default function VendorPanel({ token, listed }: { token: string; listed: 
         setError((v.errors as Record<string, string>)[code] ?? t.errors[code as ErrorCode] ?? t.errors.network);
         return undefined;
       } finally {
+        inFlight.current = false;
         setBusy(false);
       }
     },

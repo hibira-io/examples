@@ -182,6 +182,21 @@ test("codes must be text or https links", async () => {
   assert.equal((await call("POST", "/codes", { product: "alpha", codes: ["https://example.com/invite/xyz"] }, g)).body.error, "duplicate");
 });
 
+test("a link split over two lines, a tracking-only variant and a double tap are not shared twice", async () => {
+  const { call, signIn } = setup();
+  const a = await signIn("a@example.com");
+  const broken = ["https://example.com/invite?code=XYZ1&", "uid=12345"];
+  assert.equal((await call("POST", "/codes", { product: "alpha", codes: broken }, a)).body.error, "mixed");
+  const link = "https://example.com/invite?utm_source=x&code=XYZ1";
+  const both = await Promise.all([call("POST", "/codes", { product: "alpha", codes: [link] }, a), call("POST", "/codes", { product: "alpha", codes: [link] }, a)]);
+  assert.deepEqual(both.map((r) => r.status).sort(), [200, 409]);
+  const b = await signIn("b@example.com");
+  const variant = "https://EXAMPLE.com/invite?code=XYZ1&utm_medium=y#top";
+  assert.equal((await call("POST", "/codes", { product: "alpha", codes: [variant] }, b)).body.error, "duplicate");
+  const me = (await call("GET", "/state", undefined, a)).body.me;
+  assert.equal(me.given.length, 1);
+});
+
 test("a new giver has one code out until one is reported working", async () => {
   const { call, signIn } = setup();
   const giver = await signIn("new@example.com");

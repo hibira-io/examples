@@ -3,7 +3,7 @@ import type { Lang } from './i18n';
 export type ErrorCode =
   | 'sign_in' | 'banned' | 'email' | 'wait' | 'too_many' | 'human' | 'code_expired' | 'code_wrong' | 'name' | 'products' | 'cooldown' | 'one_line'
   | 'offered' | 'no_offer' | 'reported' | 'blocked' | 'code' | 'too_many_codes' | 'duplicate' | 'in_use' | 'text'
-  | 'host' | 'new_giver' | 'slow_down' | 'not_found' | 'forbidden' | 'network';
+  | 'host' | 'mixed' | 'new_giver' | 'slow_down' | 'not_found' | 'forbidden' | 'network';
 
 const en = {
   language: 'Language',
@@ -139,6 +139,7 @@ const en = {
     code: 'Codes are 4 to 300 characters; links must start with https://.',
     too_many_codes: 'You can have at most 10 codes waiting at once, 5 per gift.',
     duplicate: 'These codes are already in the queue.',
+    mixed: 'Put one invite link or code per line. A link seems to be split over two lines: paste it again on one line.',
     host: 'That link is not on the product\'s own site. Paste the invite link from the product, or just the code.',
     new_giver: 'Give one code for now. Once someone says it worked, you can give more at once.',
     in_use: 'This code has already been offered to someone.',
@@ -277,6 +278,7 @@ const zhTW: Strings = {
     code: '邀請碼長度需為 4 到 300 個字元；連結必須以 https:// 開頭。',
     too_many_codes: '同時最多 10 組等待領取，每次最多 5 組。',
     duplicate: '這些邀請碼已經在隊伍裡了。',
+    mixed: '一行放一組邀請連結或代碼。看起來有一條連結被斷成兩行了，請把它貼在同一行。',
     host: '這個連結不是該產品的官方網址。請貼產品給的邀請連結，或只貼代碼。',
     new_giver: '先送一組就好。有人回報可以用之後，就能一次送更多。',
     in_use: '這組邀請碼已經發給別人了。',
@@ -413,6 +415,7 @@ const zhCN: Strings = {
     code: '邀请码长度需为 4 到 300 个字符；链接必须以 https:// 开头。',
     too_many_codes: '同时最多 10 个等待领取，每次最多 5 个。',
     duplicate: '这些邀请码已经在队伍里了。',
+    mixed: '一行放一组邀请链接或代码。看起来有一条链接被断成两行了，请把它贴在同一行。',
     host: '这个链接不是该产品的官方网址。请粘贴产品给的邀请链接，或只粘贴代码。',
     new_giver: '先送一个就好。有人反馈可以用之后，就能一次送更多。',
     in_use: '这个邀请码已经发给别人了。',
@@ -549,6 +552,7 @@ const ja: Strings = {
     code: 'コードは 4〜300 文字、リンクは https:// で始まる必要があります。',
     too_many_codes: '受け取り待ちは同時に 10 件まで、一度に 5 件までです。',
     duplicate: 'これらのコードはすでに列にあります。',
+    mixed: '招待リンクかコードを 1 行に 1 つずつ入れてください。リンクが 2 行に分かれているようです。1 行に貼り直してください。',
     host: 'このリンクは製品の公式サイトではありません。製品の招待リンクか、コードだけを貼ってください。',
     new_giver: 'まずは 1 件だけ譲ってください。使えたと報告されると、まとめて譲れます。',
     in_use: 'このコードはすでにほかの人に案内されています。',
@@ -685,6 +689,7 @@ const ko: Strings = {
     code: '코드는 4~300자이며, 링크는 https://로 시작해야 합니다.',
     too_many_codes: '대기 중인 코드는 최대 10개, 한 번에 5개까지입니다.',
     duplicate: '이 코드들은 이미 대기열에 있습니다.',
+    mixed: '한 줄에 초대 링크나 코드 하나씩 넣어 주세요. 링크가 두 줄로 나뉜 것 같아요. 한 줄로 다시 붙여 넣어 주세요.',
     host: '이 링크는 제품의 공식 사이트가 아닙니다. 제품의 초대 링크나 코드만 붙여 넣어 주세요.',
     new_giver: '지금은 하나만 나눠 주세요. 작동했다는 응답을 받으면 더 많이 나눌 수 있어요.',
     in_use: '이 코드는 이미 다른 사람에게 제공되었습니다.',
@@ -821,6 +826,7 @@ const th: Strings = {
     code: 'โค้ดต้องยาว 4 ถึง 300 ตัวอักษร และลิงก์ต้องขึ้นต้นด้วย https://',
     too_many_codes: 'มีโค้ดรอรับได้พร้อมกันไม่เกิน 10 โค้ด และครั้งละไม่เกิน 5 โค้ด',
     duplicate: 'โค้ดเหล่านี้อยู่ในคิวแล้ว',
+    mixed: 'ใส่ลิงก์เชิญหรือโค้ดบรรทัดละหนึ่งรายการ ดูเหมือนลิงก์ถูกแบ่งเป็นสองบรรทัด กรุณาวางใหม่ในบรรทัดเดียว',
     host: 'ลิงก์นี้ไม่ใช่เว็บไซต์ทางการของผลิตภัณฑ์ วางลิงก์เชิญจากผลิตภัณฑ์ หรือวางเฉพาะโค้ด',
     new_giver: 'ส่งไปหนึ่งโค้ดก่อน เมื่อมีคนบอกว่าใช้ได้ คุณจะส่งได้ทีละหลายโค้ด',
     in_use: 'โค้ดนี้ถูกเสนอให้คนอื่นแล้ว',
@@ -957,6 +963,7 @@ const vi: Strings = {
     code: 'Mã dài 4 đến 300 ký tự; liên kết phải bắt đầu bằng https://.',
     too_many_codes: 'Tối đa 10 mã đang chờ cùng lúc, 5 mã mỗi lần.',
     duplicate: 'Những mã này đã có trong hàng chờ.',
+    mixed: 'Mỗi dòng một liên kết mời hoặc một mã. Có vẻ một liên kết bị tách thành hai dòng: hãy dán lại trên một dòng.',
     host: 'Liên kết này không thuộc trang chính thức của sản phẩm. Hãy dán liên kết mời từ sản phẩm, hoặc chỉ dán mã.',
     new_giver: 'Hãy tặng một mã trước. Khi có người báo dùng được, bạn có thể tặng nhiều mã một lúc.',
     in_use: 'Mã này đã được mời cho người khác.',
