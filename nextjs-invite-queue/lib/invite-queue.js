@@ -866,10 +866,14 @@ const ROUTES = {
     if (user.blocked) throw new QueueError(403, "blocked");
     const product = this.products.find((p) => p.id === body.product);
     if (!product) throw new QueueError(400, "products");
-    const cleaned = [...new Set((Array.isArray(body.codes) ? body.codes : [body.codes]).map((v) => cleanCode(v)).filter(Boolean))];
+    const cleaned = uniqueBy((Array.isArray(body.codes) ? body.codes : [body.codes]).map((v) => cleanCode(v)).filter(Boolean), sameCode);
     if (!cleaned.length) throw new QueueError(400, "code");
-    const known = new Set([...this.codes.values()].map((c) => `${c.product}\u0000${c.value}`));
-    const values = cleaned.filter((v) => !known.has(`${product.id}\u0000${v}`));
+    // A link next to a line of plain text is almost always one link broken
+    // over two lines, so a paste is all links or all codes.
+    const links = cleaned.filter((v) => isLink(v)).length;
+    if (links && links < cleaned.length) throw new QueueError(400, "mixed");
+    const known = new Set([...this.codes.values()].filter((c) => c.product === product.id).map((c) => sameCode(c.value)));
+    const values = cleaned.filter((v) => !known.has(sameCode(v)));
     if (!values.length) throw new QueueError(409, "duplicate");
     // A link has to be on the product's own site, so a made-up or phishing
     // link never reaches anyone; a plain code passes.
@@ -1100,12 +1104,12 @@ const ROUTES = {
     if (!product) throw new QueueError(404, "products");
     const list = Array.isArray(body.codes) ? body.codes : String(body.codes ?? "").split(/\r?\n/);
     if (list.length > VENDOR_BATCH_MAX) throw new QueueError(400, "too_many_codes");
-    const cleaned = [...new Set(list.map((x) => cleanCode(x)).filter(Boolean))];
+    const cleaned = uniqueBy(list.map((x) => cleanCode(x)).filter(Boolean), sameCode);
     if (!cleaned.length) throw new QueueError(400, "code");
     const hosts = hostsOf(product);
     if (hosts.length && cleaned.some((x) => !linkOnHosts(x, hosts))) throw new QueueError(400, "host");
-    const known = new Set([...this.codes.values()].filter((c) => c.product === product.id).map((c) => c.value));
-    const values = cleaned.filter((x) => !known.has(x));
+    const known = new Set([...this.codes.values()].filter((c) => c.product === product.id).map((c) => sameCode(c.value)));
+    const values = cleaned.filter((x) => !known.has(sameCode(x)));
     const open = [...this.codes.values()].filter((c) => c.vendor === v.id && c.product === product.id && c.state !== "taken").length;
     if (open + values.length > VENDOR_OPEN_MAX) throw new QueueError(409, "too_many_codes");
     const now = this.now();
@@ -1338,6 +1342,38 @@ function usesOf(p) {
  * people has one place per person, all with the first place's id.
  * @param {Code} c
  */
+/** Whether a code is a link. @param {string} v */
+function isLink(v) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(v);
+}
+
+/**
+ * What makes two codes the same: a link without its tracking parameters
+ * (utm_*) or #fragment, with the host in lower case; a plain code as it is.
+ * @param {string} v
+ */
+function sameCode(v) {
+  if (!isLink(v)) return v;
+  try {
+    const u = new URL(v);
+    for (const k of [...u.searchParams.keys()]) if (/^utm_/i.test(k)) u.searchParams.delete(k);
+    u.searchParams.sort();
+    u.hash = "";
+    return u.toString();
+  } catch {
+    return v;
+  }
+}
+
+/**
+ * The items whose key was not seen before, in order.
+ * @param {string[]} list @param {(v: string) => string} key
+ */
+function uniqueBy(list, key) {
+  const seen = new Set();
+  return list.filter((v) => (seen.has(key(v)) ? false : (seen.add(key(v)), true)));
+}
+
 function groupOf(c) {
   return c.group ?? c.id;
 }
