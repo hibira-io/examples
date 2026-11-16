@@ -282,7 +282,7 @@ export default function QueueView({
           <h2 id="pick-title">{t.pickTitle}</h2>
           <p className="muted">{t.pickHint}</p>
           <ul className="product-cards pick-cards">
-            {state.products.map((p) => (
+            {availableFirst(state.products).map((p) => (
               <li key={p.id} className={'product-card' + (p.open > 0 ? ' has-codes' : '')}>
                 <ProductIcon product={p} size={40} />
                 <span className="product-card-name">
@@ -396,7 +396,7 @@ export default function QueueView({
               <>
                 {view === 'get' ? (
                   <>
-                    <Line me={me} products={state.products} call={call} name={name} lang={lang} />
+                    <Line me={me} products={availableFirst(state.products)} call={call} name={name} lang={lang} />
                     {me.taken.length > 0 && <TakenList me={me} call={call} name={name} />}
                   </>
                 ) : (
@@ -410,7 +410,7 @@ export default function QueueView({
             <section className="card">
               <h2>{t.products}</h2>
               <ul className="product-cards">
-                {state.products.map((p) => (
+                {availableFirst(state.products).map((p) => (
                   <li key={p.id} className={'product-card' + (p.open > 0 ? ' has-codes' : '')}>
                     <ProductIcon product={p} size={40} />
                     <span className="product-card-name">
@@ -586,6 +586,10 @@ function Account({ me, call, onSignOut }: { me: Me; call: Call; onSignOut: () =>
   );
 }
 
+function availableFirst(products: Product[]) {
+  return [...products.filter((p) => p.open > 0), ...products.filter((p) => !(p.open > 0))];
+}
+
 function Line({ me, products, call, name, lang }: { me: Me; products: Product[]; call: Call; name: (id: string) => string; lang: string }) {
   const t = useT();
   const places = me.entries ?? (me.entry ? [me.entry] : []);
@@ -743,6 +747,8 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
   }, [products]);
   const [text, setText] = useState('');
   const [thanks, setThanks] = useState('');
+  const [sending, setSending] = useState(false);
+  const inFlight = useRef(false);
   const max = products.find((p) => p.id === product)?.uses ?? 1;
   const [left, setLeft] = useState(max);
   useEffect(() => setLeft(max), [max]);
@@ -750,11 +756,17 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
 
   const give = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inFlight.current) return;
     const codes = text
       .split('\n')
       .map((s) => s.trim())
       .filter(Boolean);
-    const res = await call('/codes', { product, codes, uses: Math.min(left, max) });
+    inFlight.current = true;
+    setSending(true);
+    const res = await call('/codes', { product, codes, uses: Math.min(left, max) }).finally(() => {
+      inFlight.current = false;
+      setSending(false);
+    });
     if (res) track('give_codes', { product, count: codes.length });
     if (res) {
       setText('');
@@ -791,7 +803,7 @@ function Give({ me, products, call, name }: { me: Me; products: Product[]; call:
             <textarea rows={3} value={text} onChange={(e) => (setText(e.target.value), setThanks(''))} spellCheck={false} autoComplete="off" />
           </label>
           <p className="actions">
-            <button className="primary" disabled={!text.trim()}>
+            <button className="primary" disabled={!text.trim() || sending}>
               {t.give}
             </button>
             {thanks && <span className="small ok">{thanks}</span>}
