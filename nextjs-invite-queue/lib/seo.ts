@@ -26,31 +26,31 @@ const TOOLS = 'Claude Code, Sora, Lovable, Windsurf, Replit, Kling, Suno, Eleven
 export const SEO: Record<Lang, { title: string; description: string }> = {
   en: {
     title: 'Invite code queue',
-    description: `Have spare invite codes? Give them away. Need one? Get in line, and codes go out in turn. Invite and referral codes for 17 tools: ${TOOLS} and more.`,
+    description: `Have spare invite codes? Give them away. Need one? Get in line, and codes go out in turn. Invite and referral codes for 18 tools: ${TOOLS} and more.`,
   },
   'zh-TW': {
     title: '排隊領邀請碼',
-    description: `有多的邀請碼就送人，需要就來排隊，邀請碼依序發出。支援 17 種工具的邀請碼與推薦碼：${TOOLS} 等。`,
+    description: `有多的邀請碼就送人，需要就來排隊，邀請碼依序發出。支援 18 種工具的邀請碼與推薦碼：${TOOLS} 等。`,
   },
   'zh-CN': {
     title: '排队领邀请码',
-    description: `有多余的邀请码就送人，需要就来排队，邀请码按顺序发出。支持 17 种工具的邀请码和推荐码：${TOOLS} 等。`,
+    description: `有多余的邀请码就送人，需要就来排队，邀请码按顺序发出。支持 18 种工具的邀请码和推荐码：${TOOLS} 等。`,
   },
   ja: {
     title: '招待コード待ち行列',
-    description: `余った招待コードは譲って、欲しい人は列に並ぶだけ。コードは順番に届きます。${TOOLS} など 17 ツールの招待コードと紹介コードに対応。`,
+    description: `余った招待コードは譲って、欲しい人は列に並ぶだけ。コードは順番に届きます。${TOOLS} など 18 ツールの招待コードと紹介コードに対応。`,
   },
   ko: {
     title: '초대 코드 대기열',
-    description: `남는 초대 코드는 나눠 주고, 필요하면 줄을 서세요. 코드는 순서대로 전달됩니다. ${TOOLS} 등 17개 도구의 초대 코드와 추천 코드를 지원합니다.`,
+    description: `남는 초대 코드는 나눠 주고, 필요하면 줄을 서세요. 코드는 순서대로 전달됩니다. ${TOOLS} 등 18개 도구의 초대 코드와 추천 코드를 지원합니다.`,
   },
   th: {
     title: 'คิวรับโค้ดเชิญ',
-    description: `มีโค้ดเชิญเหลือก็แบ่งปัน อยากได้ก็มาต่อคิว โค้ดจะส่งให้ตามลำดับ รองรับโค้ดเชิญและโค้ดแนะนำของ 17 เครื่องมือ เช่น ${TOOLS}`,
+    description: `มีโค้ดเชิญเหลือก็แบ่งปัน อยากได้ก็มาต่อคิว โค้ดจะส่งให้ตามลำดับ รองรับโค้ดเชิญและโค้ดแนะนำของ 18 เครื่องมือ เช่น ${TOOLS}`,
   },
   vi: {
     title: 'Hàng chờ nhận mã mời',
-    description: `Có mã mời dư thì tặng, cần thì xếp hàng, mã được gửi lần lượt. Hỗ trợ mã mời và mã giới thiệu của 17 công cụ: ${TOOLS} và nhiều hơn nữa.`,
+    description: `Có mã mời dư thì tặng, cần thì xếp hàng, mã được gửi lần lượt. Hỗ trợ mã mời và mã giới thiệu của 18 công cụ: ${TOOLS} và nhiều hơn nữa.`,
   },
 };
 
