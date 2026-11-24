@@ -76,7 +76,7 @@ class Tools:
             description="How long ask_for_approval waits for the answer before returning (the request stays open; check_approval reads it later).",
         )
         hibira_url: str = Field(default="https://hibira.io", description="Hibira base URL.")
-        livechat_url: str = Field(default="https://chat.hibira.io", description="Hibira Live Chat base URL.")
+        livechat_url: str = Field(default="https://api.hibira.io/live-chat", description="Hibira Live Chat REST API base (the REST API is at /v1 under it; https://chat.hibira.io also works).")
 
     def __init__(self):
         self.valves = self.Valves()
