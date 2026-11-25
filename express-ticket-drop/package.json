@@ -12,7 +12,7 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "@hibira-io/waiting-room": "^0.1.0",
+    "@hibira-io/waiting-room": "^0.2.0",
     "express": "^5.1.0",
     "pusher": "^5.3.4"
   },
