@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout · Hibira demo</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="https://hibira.io/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="https://hibira.io/portal/brand/favicon.svg" />
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a href="../../" class="brand"><img src="https://hibira.io/portal/brand/favicon.svg" alt="" width="24" height="24" /><span data-t="all"></span></a>
+        <div class="lang" id="lang">
+          <button type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Language"><span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+          <ul role="listbox" aria-label="Language"></ul>
+        </div>
+      </nav>
+
+      <section id="checking">
+        <h1 data-t="checking"></h1>
+      </section>
+
+      <section id="ok" hidden>
+        <h1 class="done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m7.5 12.5 3 3 6-6.5" /></svg><span data-t="coTitle"></span></h1>
+        <p class="muted" data-t="coLead"></p>
+        <div class="card">
+          <div class="muted"><span data-t="event"></span> · <span data-t="number"></span> <b id="number"></b></div>
+          <div class="ticket" style="margin-top: 12px">
+            <div><b id="section"></b><span data-t="section"></span></div>
+            <div><b id="row"></b><span data-t="row"></span></div>
+            <div><b id="seat"></b><span data-t="seat"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 data-t="verifiedTitle"></h2>
+          <p class="muted" data-t="verifiedText" style="margin: 0"></p>
+          <pre id="verified"></pre>
+        </div>
+      </section>
+
+      <section id="bad" hidden>
+        <h1 data-t="noPass"></h1>
+        <p class="muted" data-t="noPassText"></p>
+      </section>
+
+      <div id="actions" style="margin-top: 20px" hidden>
+        <a class="buy" href="../" id="again" data-t="again"></a>
+      </div>
+      <div class="links">
+        <a href="https://github.com/hibira-io/examples/tree/main/express-ticket-drop" data-t="source"></a>
+        <a href="https://hibira.io/waiting-room?utm_source=demos&amp;utm_medium=demo&amp;utm_campaign=examples&amp;utm_content=ticket-drop-checkout" data-t="product"></a>
+      </div>
+    </main>
+    <script type="module">
+      import { call, setupLanguage, t } from '../common.js';
+
+      const $ = (id) => document.getElementById(id);
+      let failed = false;
+      setupLanguage(() => {
+        $('again').textContent = t(failed ? 'back' : 'again');
+      });
+
+      // The waiting page sends the visitor here with ?hibira_pass=. Keep it
+      // for this page only, out of the address bar and the history.
+      const url = new URL(location.href);
+      const pass = url.searchParams.get('hibira_pass');
+      url.searchParams.delete('hibira_pass');
+      history.replaceState(null, '', url);
+      try {
+        if (pass) sessionStorage.setItem('ticket-drop-pass', pass);
+      } catch {}
+      let saved = pass;
+      try {
+        saved = pass || sessionStorage.getItem('ticket-drop-pass');
+      } catch {}
+
+      const r = saved ? await call('POST', '/ticket-drop/checkout', { pass: saved }).catch(() => null) : null;
+      $('checking').hidden = true;
+      if (r?.ok) {
+        const d = r.data;
+        $('number').textContent = '#' + d.number;
+        $('section').textContent = d.seat.section;
+        $('row').textContent = d.seat.row;
+        $('seat').textContent = d.seat.seat;
+        $('verified').textContent = 'verifyPass(pass, { secret, room })\n' + JSON.stringify(d.verified, null, 2);
+        $('ok').hidden = false;
+      } else {
+        failed = true;
+        $('again').textContent = t('back');
+        $('bad').hidden = false;
+      }
+      $('actions').hidden = false;
+    </script>
+  </body>
+</html>

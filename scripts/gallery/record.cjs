@@ -7,7 +7,9 @@
 //   node scripts/gallery/record.cjs <site dir> <demo> <work dir> [lang]
 //   scripts/gallery/compose.sh <work dir> pages/gallery/<demo>.mp4
 //
-// <demo> is one of: lobby, dashboard, spaces, four, phaser, handoff, auction. The real mouse
+// <demo> is one of: lobby, dashboard, spaces, four, phaser, handoff, auction, tickets.
+// DEMO_API_URL=http://127.0.0.1:8787 sends the pages' demo backend calls to a
+// local copy of the Worker (hibira-io/examples-infra demo-api) instead. The real mouse
 // glides in 16 ms steps so the other side gets a dense cursor trail, and
 // compose.sh keeps the 25 fps of the recording.
 const { chromium } = require('playwright');
@@ -38,6 +40,14 @@ async function side(browser, name, init, width = W, extra = {}) {
     if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: '' });
     route.fulfill({ path: f });
   });
+  if (process.env.DEMO_API_URL) {
+    await ctx.route('https://demo-api.hibira.io/**', async (route) => {
+      const r = route.request();
+      const u = new URL(r.url());
+      const res = await fetch(process.env.DEMO_API_URL + u.pathname + u.search, { method: r.method(), headers: r.headers(), body: r.postData() ?? undefined });
+      route.fulfill({ status: res.status, headers: Object.fromEntries(res.headers), body: Buffer.from(await res.arrayBuffer()) });
+    });
+  }
   await ctx.addInitScript(
     ([lang, entries]) => {
       localStorage.setItem('lang', lang);
@@ -144,6 +154,30 @@ const SCENES = {
     await type(R, 'gg! again?', 85);
     await R.page.keyboard.press('Enter');
     await sleep(1600);
+    return { L, R, t0 };
+  },
+
+  // Two buyers press "Get a ticket" a moment apart, wait in the same drop
+  // on the hosted waiting page and come back with their seats. Pressed
+  // when the next drop is about ten seconds away (ticket-drop.js: a drop
+  // every 15 s, at least 10 s after the press that sets it).
+  async tickets(b) {
+    const url = `${ORIGIN}express-ticket-drop/?lang=${LANG}`;
+    const L = await side(b, 'left', {});
+    const R = await side(b, 'right', {});
+    await L.page.goto(url);
+    await R.page.goto(url);
+    await L.page.locator('#stats:not([hidden])').waitFor();
+    await R.page.locator('#stats:not([hidden])').waitFor();
+    while (Date.now() % 15000 < 2900 || Date.now() % 15000 > 3300) await sleep(50);
+    const t0 = Date.now();
+    await sleep(800);
+    await click(L, '#buy', 600);
+    await sleep(900);
+    await click(R, '#buy', 600);
+    const back = (s) => s.page.waitForURL(/^https:\/\/demos\.hibira\.io\/.*checkout/, { timeout: 60000 }).then(() => s.page.locator('#ok:not([hidden])').waitFor());
+    await Promise.all([back(L), back(R)]);
+    await sleep(2500);
     return { L, R, t0 };
   },
 
