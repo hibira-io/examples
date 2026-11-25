@@ -56,6 +56,7 @@ Open <http://localhost:8000>. `compose.yaml` starts three services, each with a 
 ### With local PHP 8.3+, Node 22 and PostgreSQL
 
 ```sh
+createuser -P demo && createdb -O demo demo   # as a PostgreSQL superuser; the password in .env.example is demo
 composer install
 cp .env.example .env && php artisan key:generate
 # edit .env: DB_* (PostgreSQL) and HIBIRA_APP_ID / HIBIRA_APP_KEY / HIBIRA_APP_SECRET
@@ -70,7 +71,7 @@ php artisan queue:work     # terminal 2: every agent turn and every resume after
 ### Hibira app settings
 
 1. Copy the **App ID, Key and Secret** from the app page into `.env`. The secret stays on the server; the browser only gets the key and host.
-2. Add the address you open the demo at, for example `http://localhost:8000`, to the app's **Allowed origins**. Don't turn the origin check off for testing.
+2. Add the address you open the demo at to the app's **Allowed origins**, exactly as the browser's address bar shows it. Browsers treat `http://localhost:8000` and `http://127.0.0.1:8000` as different sites, and `php artisan serve` prints the second, so add both if you're not sure. Don't turn the origin check off for testing.
 3. Run `php artisan hibira:check` to check the settings and the connection.
 4. (Optional) Hibira Push: set `HIBIRA_PUSH_INSTANCE_ID` and `HIBIRA_PUSH_SECRET_KEY`, and managers who don't have the inbox open get a push notification. Without Push credentials the main flow works the same.
 
@@ -142,7 +143,7 @@ BASE_URL=http://127.0.0.1:8000 node tests/e2e/approval-flow.mjs   # three-browse
 
 | Symptom | Check |
 |---|---|
-| The customer page stays on "connecting" or says it can't reach the live service | `HIBIRA_APP_KEY`, `HIBIRA_HOST`; whether the app's Allowed origins include the current address; `php artisan hibira:check` |
+| The customer page stays on "connecting" or says it can't reach the live service | `HIBIRA_APP_KEY`, `HIBIRA_HOST`; whether the app's Allowed origins include the exact address in the address bar (`localhost` and `127.0.0.1` count as different); `php artisan hibira:check` |
 | No new requests in the inbox, `/broadcasting/auth` returns 403 | Signed in as a manager? Is `HIBIRA_APP_SECRET` correct? |
 | The customer page stays on "the agent is working" | Is `php artisan queue:work` running? `php artisan queue:health` |
 | A request stays on "resuming" after a decision | Same as above; if the worker was interrupted the request turns failed, so click Retry in the inbox |
@@ -189,6 +190,8 @@ Versions are locked in `composer.lock` and `package-lock.json`.
 
 **啟動**
 - 依照上方「Quick start」：`cp .env.example .env`，填入 `HIBIRA_*` 與 `APP_KEY`。
+- 在 Hibira app 的 Allowed origins 填入瀏覽器網址列上的位址。`localhost` 和 `127.0.0.1` 算不同網站，`php artisan serve` 顯示的是 `http://127.0.0.1:8000`，不確定就兩個都加。
+- 本機跑（不用 Docker）時，先建立 PostgreSQL 使用者和資料庫：`createuser -P demo && createdb -O demo demo`。
 - 執行 `docker compose up -d --build`，再執行 `docker compose exec app php artisan demo:reset`。
 - Docker 映像使用 FrankenPHP。本機開發時要另外跑 `php artisan queue:work`。
 
