@@ -11,6 +11,13 @@ a plain checkout under that rush, and the same rush behind a
 
 (One run on a laptop; your numbers will differ a little.)
 
+**Try it live:** [demos.hibira.io/examples/express-ticket-drop](https://demos.hibira.io/examples/express-ticket-drop/).
+Press "Get a ticket", wait in a real Hibira waiting room with everyone who
+pressed in the same few seconds, and come back with a signed pass and a
+seat. The page is `live/`; its server side (the drop's start time and the
+pass check, the same `verifyPass` as `server.js`) runs on Hibira's demo
+backend.
+
 - `before.js`: the shop as most of us first write it. The checkout reads the
   seats left, then writes, in two queries, so thousands of buyers read
   "seats left" before anyone writes. The rest wait for a database
@@ -59,3 +66,4 @@ middleware, Netlify, CloudFront); see the
 Hibira 排隊室（`expressWaitingRoom`），買家拿號碼、即時看順位、分批帶著簽章通行證進場；
 結帳一步完成扣座位、每個號碼只買一次，賣完就關閉排隊室。結果剛好賣出 500 個、0 失敗。
 `scripts/flood.js` 是壓力測試腳本。
+線上 demo：https://demos.hibira.io/examples/express-ticket-drop/ ，按「搶票」就能真的排一次隊，輪到你時帶著簽章通行證回來拿座位。

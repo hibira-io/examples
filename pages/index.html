@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hibira live demos</title>
-    <meta name="description" content="Realtime demos built with Hibira: a multiplayer game lobby, a live dashboard and a shared planner. Open them in two tabs and watch them sync." />
+    <meta name="description" content="Realtime demos built with Hibira: a ticket drop behind a waiting room, a multiplayer game lobby, a live dashboard and a shared planner. Open them in two tabs and watch them sync." />
     <link rel="icon" href="https://hibira.io/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/svg+xml" href="https://hibira.io/portal/brand/favicon.svg" />
     <style>
@@ -78,6 +78,18 @@
       <h1 data-t="title"></h1>
       <p class="muted" data-t="intro"></p>
       <div class="grid">
+        <section class="card">
+          <a class="preview" href="express-ticket-drop/" data-demo tabindex="-1" aria-hidden="true">
+            <video muted loop playsinline preload="none" poster="gallery/tickets.webp" data-src="gallery/tickets.mp4"></video>
+            <span class="tag" data-t="live"></span>
+          </a>
+          <h2 data-t="ticketsTitle"></h2>
+          <p class="muted" data-t="ticketsText"></p>
+          <div class="links">
+            <a class="button" href="express-ticket-drop/" data-t="open" data-demo></a>
+            <a href="https://github.com/hibira-io/examples/tree/main/express-ticket-drop" data-t="source"></a>
+          </div>
+        </section>
         <section class="card">
           <a class="preview" href="nextjs-handoff/" data-demo tabindex="-1" aria-hidden="true">
             <video muted loop playsinline preload="none" poster="gallery/handoff.webp" data-src="gallery/handoff.mp4"></video>
@@ -180,6 +192,8 @@
     <script>
       const STRINGS = {
         en: {
+          ticketsTitle: 'Ticket drop with a waiting room',
+          ticketsText: "Press Get a ticket and queue in a real waiting room with everyone who pressed in the same few seconds, then come back with a signed pass and your seat. In the example's load test the same rush oversold 375 seats without it.",
           name: 'English',
           title: 'Hibira live demos',
           intro: 'Open a demo in two tabs, or send its link to a friend, and watch both update in real time. Each demo is a complete example app you can copy from GitHub.',
@@ -205,6 +219,8 @@
           footer: 'Hibira is a hosted realtime WebSocket service that speaks the Pusher Channels protocol. The free plan needs no card.',
         },
         'zh-TW': {
+          ticketsTitle: '有排隊室的搶票',
+          ticketsText: '按下「搶票」，和同一時間按下的人一起在真正的排隊室裡排隊，輪到你時帶著簽章通行證回來拿座位。範例的壓力測試裡，同樣的人潮在沒有排隊室時超賣了 375 個座位。',
           name: '繁體中文',
           title: 'Hibira 即時 demo',
           intro: '在兩個分頁打開 demo，或把連結傳給朋友，就能看到兩邊即時同步。每個 demo 都是完整的範例 app，可以直接從 GitHub 複製。',
@@ -230,6 +246,8 @@
           footer: 'Hibira 是相容 Pusher Channels 協定的即時 WebSocket 託管服務，免費方案不需要信用卡。',
         },
         'zh-CN': {
+          ticketsTitle: '有排队室的抢票',
+          ticketsText: '按下“抢票”，和同一时间按下的人一起在真正的排队室里排队，轮到你时带着签名通行证回来拿座位。示例的压力测试里，同样的人潮在没有排队室时超卖了 375 个座位。',
           name: '简体中文',
           title: 'Hibira 实时 demo',
           intro: '在两个标签页打开 demo，或把链接发给朋友，就能看到两边实时同步。每个 demo 都是完整的示例 app，可以直接从 GitHub 复制。',
@@ -255,6 +273,8 @@
           footer: 'Hibira 是兼容 Pusher Channels 协议的实时 WebSocket 托管服务，免费方案无需信用卡。',
         },
         ja: {
+          ticketsTitle: '待合室つきのチケット販売',
+          ticketsText: '「チケットを取る」を押すと、同じ数秒間に押した人たちと本物の待合室に並び、順番が来たら署名付きパスを持って戻って席を受け取ります。サンプルの負荷テストでは、待合室なしで同じ混雑が 375 席の売りすぎを起こしました。',
           name: '日本語',
           title: 'Hibira ライブデモ',
           intro: 'デモを 2 つのタブで開くか、リンクを友達に送ると、両方がリアルタイムに同期します。どのデモも GitHub からそのまま使える完全なサンプルアプリです。',
@@ -280,6 +300,8 @@
           footer: 'Hibira は Pusher Channels プロトコル互換のリアルタイム WebSocket ホスティングサービスです。無料プランはカード不要です。',
         },
         ko: {
+          ticketsTitle: '대기실이 있는 티켓 오픈',
+          ticketsText: '티켓 받기를 누르면 같은 몇 초 사이에 누른 사람들과 실제 대기실에서 줄을 서고, 차례가 되면 서명된 패스를 들고 돌아와 좌석을 받습니다. 예제의 부하 테스트에서 대기실이 없을 때 같은 몰림으로 375석이 초과 판매됐어요.',
           name: '한국어',
           title: 'Hibira 라이브 데모',
           intro: '데모를 두 탭에서 열거나 친구에게 링크를 보내면 양쪽이 실시간으로 동기화되는 것을 볼 수 있습니다. 모든 데모는 GitHub에서 바로 가져다 쓸 수 있는 완전한 예제 앱입니다.',
@@ -305,6 +327,8 @@
           footer: 'Hibira는 Pusher Channels 프로토콜과 호환되는 실시간 WebSocket 호스팅 서비스입니다. 무료 플랜은 카드가 필요 없습니다.',
         },
         th: {
+          ticketsTitle: 'เปิดขายตั๋วพร้อมห้องรอคิว',
+          ticketsText: 'กดรับตั๋วแล้วต่อคิวในห้องรอคิวจริงกับทุกคนที่กดในไม่กี่วินาทีเดียวกัน แล้วกลับมาพร้อมบัตรผ่านที่มีลายเซ็นและที่นั่งของคุณ ในการทดสอบโหลดของตัวอย่าง คนแห่มาเท่ากันโดยไม่มีห้องรอคิวทำให้ขายเกินไป 375 ที่นั่ง',
           name: 'ไทย',
           title: 'เดโมสดของ Hibira',
           intro: 'เปิดเดโมในสองแท็บ หรือส่งลิงก์ให้เพื่อน แล้วดูทั้งสองฝั่งอัปเดตแบบเรียลไทม์ ทุกเดโมเป็นแอปตัวอย่างครบชุดที่คัดลอกจาก GitHub ได้ทันที',
@@ -330,6 +354,8 @@
           footer: 'Hibira คือบริการ WebSocket เรียลไทม์แบบโฮสต์ที่รองรับโปรโตคอล Pusher Channels แพ็กเกจฟรีไม่ต้องใช้บัตร',
         },
         vi: {
+          ticketsTitle: 'Mở bán vé với phòng chờ',
+          ticketsText: 'Bấm Lấy vé để xếp hàng trong một phòng chờ thật cùng mọi người bấm trong cùng vài giây, rồi quay lại với vé thông hành có chữ ký và ghế của bạn. Trong bài kiểm thử tải của ví dụ, cùng đợt đổ xô đó đã bán vượt 375 ghế khi không có phòng chờ.',
           name: 'Tiếng Việt',
           title: 'Demo trực tiếp của Hibira',
           intro: 'Mở một demo ở hai tab, hoặc gửi liên kết cho bạn bè, và xem cả hai cập nhật theo thời gian thực. Mỗi demo là một ứng dụng mẫu hoàn chỉnh mà bạn có thể sao chép từ GitHub.',

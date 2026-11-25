@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ticket drop with a waiting room · Hibira demo</title>
+    <meta name="description" content="Press Get a ticket and queue in a real Hibira waiting room, then come back with a signed pass. The live demo of the express-ticket-drop example." />
+    <link rel="icon" href="https://hibira.io/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="https://hibira.io/portal/brand/favicon.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a href="../" class="brand"><img src="https://hibira.io/portal/brand/favicon.svg" alt="" width="24" height="24" /><span data-t="all"></span></a>
+        <div class="lang" id="lang">
+          <button type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Language"><span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+          <ul role="listbox" aria-label="Language"></ul>
+        </div>
+      </nav>
+      <h1 data-t="title"></h1>
+      <p class="muted" data-t="intro"></p>
+
+      <section class="card event">
+        <div class="poster"><div><strong data-t="event"></strong><span data-t="eventMeta"></span></div></div>
+        <button type="button" class="buy" id="buy" data-t="get"></button>
+        <div class="stats" id="stats" hidden>
+          <span class="live"><b id="waiting">0</b>&nbsp;<span data-t="inLine"></span></span>
+          <span><b id="issued">0</b>&nbsp;<span data-t="taken"></span></span>
+        </div>
+        <p class="note" id="note" role="status" hidden></p>
+      </section>
+
+      <section class="card">
+        <h2 data-t="howTitle"></h2>
+        <ol>
+          <li data-t="how1"></li>
+          <li data-t="how2"></li>
+          <li data-t="how3"></li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2 data-t="testTitle"></h2>
+        <p class="muted" data-t="testText"></p>
+        <table>
+          <thead><tr><th></th><th data-t="colNo"></th><th data-t="colWith"></th></tr></thead>
+          <tbody>
+            <tr><td data-t="rowSold"></td><td class="bad" data-n="875"></td><td class="good" data-n="500"></td></tr>
+            <tr><td data-t="rowOver"></td><td class="bad" data-n="375"></td><td class="good" data-n="0"></td></tr>
+            <tr><td data-t="rowFailed"></td><td class="bad" data-n="2125"></td><td class="good" data-n="0"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="links">
+        <a href="https://github.com/hibira-io/examples/tree/main/express-ticket-drop" data-t="source"></a>
+        <a href="https://hibira.io/waiting-room?utm_source=demos&amp;utm_medium=demo&amp;utm_campaign=examples&amp;utm_content=ticket-drop" data-t="product"></a>
+      </div>
+    </main>
+    <script type="module">
+      import { call, lang, setupLanguage, t } from './common.js';
+
+      const $ = (id) => document.getElementById(id);
+      const nf = () => new Intl.NumberFormat(lang);
+      let last = null;
+      const show = (s) => {
+        last = s;
+        $('waiting').textContent = nf().format(s.waiting);
+        $('issued').textContent = nf().format(s.issued);
+        $('stats').hidden = false;
+      };
+      const note = (key) => {
+        $('note').textContent = key ? t(key) : '';
+        $('note').hidden = !key;
+      };
+      setupLanguage(() => {
+        for (const el of document.querySelectorAll('[data-n]')) el.textContent = nf().format(Number(el.dataset.n));
+        if (last) show(last);
+      });
+
+      // The room's counters, while the page is visible.
+      async function poll() {
+        if (document.visibilityState === 'visible') {
+          const r = await call('GET', '/ticket-drop/status').catch(() => null);
+          if (r?.ok) show(r.data);
+        }
+        setTimeout(poll, 4000);
+      }
+      poll();
+
+      $('buy').addEventListener('click', async () => {
+        if ($('buy').getAttribute('aria-busy') === 'true') return;
+        $('buy').setAttribute('aria-busy', 'true');
+        $('buy').textContent = t('going');
+        note(null);
+        const r = await call('POST', '/ticket-drop/join', { lang }).catch(() => null);
+        if (r?.ok && r.data.url) {
+          location.href = r.data.url;
+          return;
+        }
+        note(r?.status === 409 ? 'closed' : 'error');
+        $('buy').removeAttribute('aria-busy');
+        $('buy').textContent = t('get');
+      });
+      // Back from the waiting page with the browser's back button.
+      addEventListener('pageshow', () => {
+        $('buy').removeAttribute('aria-busy');
+        $('buy').textContent = t('get');
+      });
+    </script>
+  </body>
+</html>
