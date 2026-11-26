@@ -61,6 +61,8 @@ jobs:
           # The ticket drop's live page: static files, with the demo
           # backend's address (express-ticket-drop/live/common.js).
           cp -r express-ticket-drop/live site/express-ticket-drop
+          # Hibi for Chrome's demo shop (and the Web Store reviewers' test page).
+          mkdir -p site/northwind && cp hibi-northwind/index.html site/northwind/
           sed -i "s#https://demo-api.hibira.io#$NEXT_PUBLIC_DEMO_API#" site/express-ticket-drop/common.js
           (cd phaser-lobby && npm ci --no-audit --no-fund && VITE_DEMO_API="$NEXT_PUBLIC_DEMO_API" DEMO_BASE_PATH=/examples/phaser-lobby npx vite build)
           cp -r phaser-lobby/dist site/phaser-lobby
